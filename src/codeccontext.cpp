@@ -507,6 +507,19 @@ bool CodecContext2::isFlags2(int flags) noexcept
     return false;
 }
 
+void CodecContext2::setExtraData(const std::string& extraData)
+{
+    m_raw->extradata_size = extraData.size();
+    m_raw->extradata = reinterpret_cast<uint8_t*>(av_mallocz(m_raw->extradata_size));
+    std::copy(extraData.begin(), extraData.end(), m_raw->extradata);
+}
+
+std::string CodecContext2::extraData() const
+{
+    return std::string(reinterpret_cast<char*>(m_raw->extradata), m_raw->extradata_size);
+}
+
+
 bool CodecContext2::isValidForEncode(Direction direction, AVMediaType /*type*/) const noexcept
 {
     if (!isValid())

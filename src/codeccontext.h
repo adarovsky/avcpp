@@ -123,6 +123,8 @@ public:
     bool isFlags2(int flags) noexcept;
     /// @}
 
+    void setExtraData(const std::string& extraData);
+    std::string extraData() const;
 
 protected:
 

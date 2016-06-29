@@ -185,6 +185,12 @@ CodecContext2::~CodecContext2()
     if (!m_stream.isNull())
         return;
 
+    if (m_raw->extradata) {
+        av_free(m_raw->extradata);
+        m_raw->extradata = NULL;
+        m_raw->extradata_size = 0;
+    }
+
     std::error_code ec;
     close(ec);
     av_freep(&m_raw);
@@ -509,14 +515,24 @@ bool CodecContext2::isFlags2(int flags) noexcept
 
 void CodecContext2::setExtraData(const std::string& extraData)
 {
+    if (m_raw->extradata)
+        av_free(m_raw->extradata);
+
     m_raw->extradata_size = extraData.size();
-    m_raw->extradata = reinterpret_cast<uint8_t*>(av_mallocz(m_raw->extradata_size));
-    std::copy(extraData.begin(), extraData.end(), m_raw->extradata);
+    if (m_raw->extradata_size > 0) {
+        m_raw->extradata = reinterpret_cast<uint8_t*>(av_malloc(m_raw->extradata_size));
+        std::copy(extraData.begin(), extraData.end(), m_raw->extradata);
+    }
+    else
+        m_raw->extradata = NULL;
 }
 
 std::string CodecContext2::extraData() const
 {
-    return std::string(reinterpret_cast<char*>(m_raw->extradata), m_raw->extradata_size);
+    if (m_raw->extradata)
+        return std::string(reinterpret_cast<char*>(m_raw->extradata), m_raw->extradata_size);
+    else
+        return std::string();
 }
 
 

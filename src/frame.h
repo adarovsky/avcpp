@@ -323,6 +323,8 @@ public:
     size_t         sampleBitDepth(std::error_code& ec = throws()) const;
 
     std::string    channelsLayoutString() const;
+
+    static AudioSamples silence(SampleFormat sampleFormat, int samplesCount, uint64_t channelLayout, int sampleRate, int align = SampleFormat::AlignDefault);
 };
 
 // Be a little back compat

@@ -286,4 +286,18 @@ string AudioSamples::channelsLayoutString() const
     return string(buf);
 }
 
+AudioSamples AudioSamples::silence(SampleFormat sampleFormat, int samplesCount, uint64_t channelLayout, int sampleRate, int align)
+{
+    AudioSamples result(sampleFormat, samplesCount, channelLayout, sampleRate, align);
+
+    const auto channels = av_get_channel_layout_nb_channels(channelLayout);
+
+    SampleFormat::setSilence(result.m_raw->data, 0, samplesCount, channels, sampleFormat);
+
+    result.setComplete(true);
+
+    return result;
+}
+
+
 } // ::av

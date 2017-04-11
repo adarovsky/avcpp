@@ -22,16 +22,33 @@ CodecContextDeprecated::CodecContextDeprecated()
 CodecContextDeprecated::CodecContextDeprecated(const Stream &st, const Codec &codec)
     : m_stream(st)
 {
-    m_raw = st.raw()->codec;
 
     Codec c = codec;
 
-    if (codec.isNull()) {
+#if !USE_CODECPAR
+    FF_DISABLE_DEPRECATION_WARNINGS
+    auto const codecId = st.raw()->codec->codec_id;
+    FF_ENABLE_DEPRECATION_WARNINGS
+#else
+    auto const codecId = st.raw()->codecpar->codec_id;
+#endif
+
+    if (codec.isNull())
+    {
         if (st.direction() == Direction::Decoding)
-            c = findDecodingCodec(m_raw->codec_id);
+            c = findDecodingCodec(codecId);
         else
-            c = findEncodingCodec(m_raw->codec_id);
+            c = findEncodingCodec(codecId);
     }
+
+
+#if !USE_CODECPAR
+    FF_DISABLE_DEPRECATION_WARNINGS
+    m_raw = st.raw()->codec;
+    FF_ENABLE_DEPRECATION_WARNINGS
+#else
+    m_raw = avcodec_alloc_context3(c.raw());
+#endif
 
     if (!c.isNull())
         setCodec(c);
@@ -46,10 +63,14 @@ CodecContextDeprecated::CodecContextDeprecated(const Codec &codec)
 
 CodecContextDeprecated::~CodecContextDeprecated()
 {
+#if !USE_CODECPAR
+    if (m_stream.isNull())
+        return;
+#endif
+
     error_code ec;
     close(ec);
-    if (m_stream.isNull())
-        av_freep(&m_raw);
+    av_freep(&m_raw);
 }
 
 
@@ -138,9 +159,15 @@ void CodecContextDeprecated::setCodec(const Codec &codec, bool resetDefaults, er
         }
     }
 
+#if !USE_CODECPAR
+    FF_DISABLE_DEPRECATION_WARNINGS
     if (m_stream.isValid()) {
         m_stream.raw()->codec = m_raw;
     }
+    FF_ENABLE_DEPRECATION_WARNINGS
+#else
+    avcodec_parameters_from_context(m_stream.raw()->codecpar, m_raw);
+#endif
 }
 
 void CodecContextDeprecated::open(error_code &ec)
@@ -238,10 +265,18 @@ void CodecContextDeprecated::copyContextFrom(const CodecContextDeprecated &other
         return;
     }
 
+#if !USE_CODECPAR
+    FF_DISABLE_DEPRECATION_WARNINGS
     int stat = avcodec_copy_context(m_raw, other.m_raw);
-    m_raw->codec_tag = 0;
     if (stat < 0)
         throws_if(ec, stat, ffmpeg_category());
+    FF_ENABLE_DEPRECATION_WARNINGS
+#else
+    AVCodecParameters params{};
+    avcodec_parameters_from_context(&params, other.m_raw);
+    avcodec_parameters_to_context(m_raw, &params);
+#endif
+    m_raw->codec_tag = 0;
 }
 
 Rational CodecContextDeprecated::timeBase() const
@@ -659,7 +694,7 @@ VideoFrame CodecContextDeprecated::decodeVideo(error_code &ec, const Packet &pac
     }
 
     int gotFrame = 0;
-    auto st = decodeCommon(outFrame, packet, offset, gotFrame, avcodec_decode_video2);
+    auto st = decodeCommon(outFrame, packet, offset, gotFrame, avcodec_decode_video_legacy);
 
     if (get<1>(st)) {
         throws_if(ec, get<0>(st), *get<1>(st));
@@ -684,7 +719,7 @@ Packet CodecContextDeprecated::encodeVideo(const VideoFrame &inFrame, error_code
 
     int gotPacket = 0;
     Packet packet;
-    auto st = encodeCommon(packet, inFrame, gotPacket, avcodec_encode_video2);
+    auto st = encodeCommon(packet, inFrame, gotPacket, avcodec_encode_video_legacy);
 
     if (get<1>(st)) {
         throws_if(ec, get<0>(st), *get<1>(st));
@@ -716,7 +751,7 @@ AudioSamples CodecContextDeprecated::decodeAudio(const Packet &inPacket, size_t 
     AudioSamples outSamples;
 
     int gotFrame = 0;
-    auto st = decodeCommon(outSamples, inPacket, offset, gotFrame, avcodec_decode_audio4);
+    auto st = decodeCommon(outSamples, inPacket, offset, gotFrame, avcodec_decode_audio_legacy);
     if (get<1>(st))
     {
         throws_if(ec, get<0>(st), *get<1>(st));
@@ -748,7 +783,7 @@ Packet CodecContextDeprecated::encodeAudio(const AudioSamples &inSamples, error_
     Packet outPacket;
 
     int gotFrame = 0;
-    auto st = encodeCommon(outPacket, inSamples, gotFrame, avcodec_encode_audio2);
+    auto st = encodeCommon(outPacket, inSamples, gotFrame, avcodec_encode_audio_legacy);
     if (get<1>(st))
     {
         throws_if(ec, get<0>(st), *get<1>(st));
@@ -890,8 +925,10 @@ std::pair<ssize_t, const error_category *> CodecContextDeprecated::decodeCommon(
     if (frame->pts == AV_NOPTS_VALUE)
         frame->pts = av_frame_get_best_effort_timestamp(frame);
 
+#if !defined(FF_API_PKT_PTS)
     if (frame->pts == AV_NOPTS_VALUE)
         frame->pts = frame->pkt_pts;
+#endif
 
     if (frame->pts == AV_NOPTS_VALUE)
         frame->pts = frame->pkt_dts;
@@ -922,9 +959,15 @@ std::pair<ssize_t, const error_category *> CodecContextDeprecated::encodeCommon(
         outPacket.setTimeBase(inFrame.timeBase());
         outPacket.setStreamIndex(inFrame.streamIndex());
     } else if (m_stream.isValid()) {
+#if USE_CODECPAR
+        outPacket.setTimeBase(av_stream_get_codec_timebase(m_stream.raw()));
+#else
+        FF_DISABLE_DEPRECATION_WARNINGS
         if (m_stream.raw()->codec) {
             outPacket.setTimeBase(m_stream.raw()->codec->time_base);
         }
+        FF_ENABLE_DEPRECATION_WARNINGS
+#endif
         outPacket.setStreamIndex(m_stream.index());
     }
 

@@ -222,11 +222,15 @@ Stream FormatContext::addStream(const Codec &codec, error_code &ec)
 
     auto stream = Stream(m_monitor, st, Direction::Encoding);
 
+#if !USE_CODECPAR
+    FF_DISABLE_DEPRECATION_WARNINGS
     if (st->codec) {
         if (outputFormat().isFlags(AVFMT_GLOBALHEADER)) {
             st->codec->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
         }
     }
+    FF_ENABLE_DEPRECATION_WARNINGS
+#endif
 
     return stream;
 }
@@ -587,6 +591,8 @@ void FormatContext::openOutput(const string &uri, OutputFormat format, AVDiction
     }
 
     // Fix stream flags
+#if !USE_CODECPAR
+    FF_DISABLE_DEPRECATION_WARNINGS
     for (size_t i = 0; i < streamsCount(); ++i) {
         auto st = stream(i);
         if (st.raw()->codec) {
@@ -595,6 +601,8 @@ void FormatContext::openOutput(const string &uri, OutputFormat format, AVDiction
             }
         }
     }
+    FF_ENABLE_DEPRECATION_WARNINGS
+#endif
 
     resetSocketAccess();
     if (!(format.flags() & AVFMT_NOFILE))
@@ -916,12 +924,16 @@ void FormatContext::findStreamInfo(AVDictionary **options, size_t optionsCount, 
 void FormatContext::closeCodecContexts()
 {
     // HACK: This is hack to correct cleanup codec contexts in independ way
+#if !USE_CODECPAR
+    FF_DISABLE_DEPRECATION_WARNINGS
     auto nb = m_raw->nb_streams;
     for (size_t i = 0; i < nb; ++i) {
         auto st = m_raw->streams[i];
         auto ctx = st->codec;
         avcodec_close(ctx);
     }
+    FF_ENABLE_DEPRECATION_WARNINGS
+#endif
 }
 
 ssize_t FormatContext::checkPbError(ssize_t stat)

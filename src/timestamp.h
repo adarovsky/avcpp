@@ -61,6 +61,9 @@ public:
     }
 
     Timestamp& operator+=(const Timestamp &other);
+    Timestamp& operator-=(const Timestamp &other);
+    Timestamp& operator*=(const Timestamp &other);
+    Timestamp& operator/=(const Timestamp &other);
 
 private:
     int64_t  m_timestamp = AV_NOPTS_VALUE;
@@ -101,6 +104,19 @@ bool operator!=(const Timestamp& left, const Timestamp &right) noexcept
     return !operator==(left, right);
 }
 
+inline
+bool operator>=(const Timestamp& left, const Timestamp& right) noexcept
+{
+    return av_compare_ts(left.timestamp(), left.timebase(),
+                         right.timestamp(), right.timebase()) >= 0;
+}
+
+inline
+bool operator<=(const Timestamp& left, const Timestamp& right) noexcept
+{
+    return av_compare_ts(left.timestamp(), left.timebase(),
+                         right.timestamp(), right.timebase()) <= 0;
+}
 
 //
 // Math operations

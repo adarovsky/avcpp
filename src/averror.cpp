@@ -6,6 +6,11 @@ using namespace std;
 
 namespace av {
 
+namespace detail {
+    std::error_code _throws;
+}
+
+
 const char *AvcppCategory::name() const noexcept
 {
     return "AvcppError";

@@ -155,7 +155,10 @@ void throw_error_code(Errors errc)
     throw Exception(make_error_code(errc));
 }
 
-namespace detail { inline std::error_code * throws() { return 0; } }
+namespace detail {
+    extern std::error_code _throws;
+    inline std::error_code * throws() { return &_throws; }
+}
 // From Boost.System
 //  Misuse of the error_code object is turned into a noisy failure by
 //  poisoning the reference. This particular implementation doesn't

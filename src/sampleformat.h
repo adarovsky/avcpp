@@ -36,7 +36,7 @@ public:
 
     const char* name(OptionalErrorCode ec = throws()) const;
 
-    SampleFormat alternativeSampleFormat(bool isPlanar) const noexcept;
+//    SampleFormat alternativeSampleFormat(bool isPlanar) const noexcept;
     SampleFormat packedSampleFormat() const noexcept;
     SampleFormat planarSampleFormat() const noexcept;
 

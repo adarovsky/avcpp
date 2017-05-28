@@ -60,7 +60,7 @@ PixelFormat PixelFormat::swapEndianness() const noexcept
 
 size_t PixelFormat::convertionLoss(PixelFormat dstFmt, bool srcHasAlpha) const noexcept
 {
-    return static_cast<size_t>(av_get_pix_fmt_loss(dstFmt, m_fmt, srcHasAlpha));
+    return static_cast<size_t>(avcodec_get_pix_fmt_loss(dstFmt, m_fmt, srcHasAlpha));
 }
 
 } // namespace av

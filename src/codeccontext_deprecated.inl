@@ -765,7 +765,7 @@ AudioSamples CodecContextDeprecated::decodeAudio(const Packet &inPacket, size_t 
 
     // Fix channels layout
     if (outSamples.channelsCount() && !outSamples.channelsLayout())
-        av_frame_set_channel_layout(outSamples.raw(), av_get_default_channel_layout(outSamples.channelsCount()));
+        outSamples.raw()->channel_layout = av_get_default_channel_layout(outSamples.channelsCount());
 
     return outSamples;
 
@@ -922,8 +922,8 @@ std::pair<ssize_t, const error_category *> CodecContextDeprecated::decodeCommon(
 
     AVFrame *frame = outFrame.raw();
 
-    if (frame->pts == AV_NOPTS_VALUE)
-        frame->pts = av_frame_get_best_effort_timestamp(frame);
+//    if (frame->pts == AV_NOPTS_VALUE)
+//        frame->pts = av_frame_get_best_effort_timestamp(frame);
 
 #if !defined(FF_API_PKT_PTS)
     if (frame->pts == AV_NOPTS_VALUE)

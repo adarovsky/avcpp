@@ -42,7 +42,7 @@ AudioResampler::~AudioResampler()
 {
     if (m_raw)
     {
-        swr_free(&m_raw);
+        avresample_free(&m_raw);
     }
 }
 
@@ -136,7 +136,7 @@ bool AudioResampler::pop(AudioSamples &dst, bool getall, OptionalErrorCode ec)
         return false;
     }
 
-    auto result = swr_get_delay(m_raw, m_dstRate);
+    auto result = avresample_available(m_raw);
     //clog << "  delay [pop]: " << result << endl;
 
     // Need more data
@@ -145,7 +145,7 @@ bool AudioResampler::pop(AudioSamples &dst, bool getall, OptionalErrorCode ec)
         return false;
     }
 
-    auto sts = swr_convert_frame(m_raw, dst.raw(), nullptr);
+    auto sts = avresample_convert_frame(m_raw, dst.raw(), nullptr);
     if (sts < 0)
     {
         throws_if(ec, sts, ffmpeg_category());
@@ -163,7 +163,7 @@ bool AudioResampler::pop(AudioSamples &dst, bool getall, OptionalErrorCode ec)
     dst.setPts(m_nextPts);
     m_nextPts = dst.pts() + Timestamp{dst.samplesCount(), dst.timeBase()};
 
-    //result = swr_get_delay(m_raw, m_dstRate);
+    //result = avresample_available(m_raw);
     //clog << "  delay [pop]: " << result << endl;
 
     // When no data, samples count sets to zero
@@ -181,7 +181,7 @@ AudioSamples AudioResampler::pop(size_t samplesCount, OptionalErrorCode ec)
         return AudioSamples(nullptr);
     }
 
-    auto delay = swr_get_delay(m_raw, m_dstRate);
+    auto delay = avresample_available(m_raw);
 
     // Need more data
     if ((size_t)delay < samplesCount && samplesCount)
@@ -199,7 +199,7 @@ AudioSamples AudioResampler::pop(size_t samplesCount, OptionalErrorCode ec)
         return AudioSamples(nullptr);
     }
 
-    auto sts = swr_convert_frame(m_raw, dst.raw(), nullptr);
+    auto sts = avresample_convert_frame(m_raw, dst.raw(), nullptr);
     if (sts < 0)
     {
         throws_if(ec, sts, ffmpeg_category());
@@ -242,7 +242,7 @@ void AudioResampler::push(const AudioSamples &src, OptionalErrorCode ec)
         }
     }
 
-    auto sts = swr_convert_frame(m_raw, nullptr, src.raw());
+    auto sts = avresample_convert_frame(m_raw, nullptr, const_cast<AVFrame*>(src.raw()));
     if (sts < 0)
     {
         fflog(AV_LOG_DEBUG, "Src is null: %d, payload: %p\n", src.isNull(), src.data());
@@ -258,7 +258,7 @@ void AudioResampler::push(const AudioSamples &src, OptionalErrorCode ec)
         m_nextPts = Timestamp();
     m_prevPts     = src.pts();
 
-    //auto result = swr_get_delay(m_raw, m_dstRate);
+    //auto result = avresample_available(m_raw);
     //clog << "  delay [push]: " << result << endl;
 }
 
@@ -271,7 +271,7 @@ bool AudioResampler::isValid() const
 int64_t AudioResampler::delay() const
 {
     if (m_raw)
-        return swr_get_delay(m_raw, m_dstRate);
+        return avresample_available(m_raw);
     return -1;
 }
 
@@ -336,7 +336,7 @@ bool AudioResampler::init(int64_t dstChannelsLayout, int dstRate, SampleFormat d
 
     if (m_raw == nullptr)
     {
-        m_raw = swr_alloc();
+        m_raw = avresample_alloc_context();
         if (m_raw == nullptr)
         {
             fflog(AV_LOG_FATAL, "Can't alloc SwrContext\n");
@@ -350,12 +350,12 @@ bool AudioResampler::init(int64_t dstChannelsLayout, int dstRate, SampleFormat d
         if (sts < 0)
         {
             fflog(AV_LOG_ERROR, "Can't initalize Audio Resample context\n");
-            swr_free(&m_raw);
+            avresample_free(&m_raw);
         }
     });
 
     /* set options */
-    sts = av_opt_set_channel_layout(m_raw, "in_channel_layout",     srcChannelsLayout, 0);
+    sts = av_opt_set_int(m_raw, "in_channel_layout",     srcChannelsLayout, 0);
     if (sts < 0)
         goto ffmpeg_internal_fails;
 
@@ -363,11 +363,11 @@ bool AudioResampler::init(int64_t dstChannelsLayout, int dstRate, SampleFormat d
     if (sts < 0)
         goto ffmpeg_internal_fails;
 
-    sts = av_opt_set_sample_fmt(m_raw,     "in_sample_fmt",         srcFormat,         0);
+    sts = av_opt_set_int(m_raw,     "in_sample_fmt",         srcFormat,         0);
     if (sts < 0)
         goto ffmpeg_internal_fails;
 
-    sts = av_opt_set_channel_layout(m_raw, "out_channel_layout",    dstChannelsLayout, 0);
+    sts = av_opt_set_int(m_raw, "out_channel_layout",    dstChannelsLayout, 0);
     if (sts < 0)
         goto ffmpeg_internal_fails;
 
@@ -375,7 +375,7 @@ bool AudioResampler::init(int64_t dstChannelsLayout, int dstRate, SampleFormat d
     if (sts < 0)
         goto ffmpeg_internal_fails;
 
-    sts = av_opt_set_sample_fmt(m_raw,     "out_sample_fmt",        dstFormat,         0);
+    sts = av_opt_set_int(m_raw,     "out_sample_fmt",        dstFormat,         0);
     if (sts < 0)
         goto ffmpeg_internal_fails;
 
@@ -387,7 +387,7 @@ bool AudioResampler::init(int64_t dstChannelsLayout, int dstRate, SampleFormat d
             goto ffmpeg_internal_fails;
     }
 
-    if ((sts = swr_init(m_raw)) < 0)
+    if ((sts = avresample_open(m_raw)) < 0)
     {
         goto ffmpeg_internal_fails;
     }

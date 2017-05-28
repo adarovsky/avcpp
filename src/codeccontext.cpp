@@ -135,7 +135,7 @@ int avcodec_encode_audio_legacy(AVCodecContext *avctx, AVPacket *avpkt,
 
 } //::anonymous
 
-#include "codeccontext_deprecated.inl"
+//#include "codeccontext_deprecated.inl"
 
 namespace av {
 
@@ -834,7 +834,7 @@ AudioSamples AudioDecoderContext::decode(const Packet &inPacket, size_t offset, 
 
     // Fix channels layout
     if (outSamples.channelsCount() && !outSamples.channelsLayout())
-        av_frame_set_channel_layout(outSamples.raw(), av_get_default_channel_layout(outSamples.channelsCount()));
+        outSamples.raw()->channel_layout = av_get_default_channel_layout(outSamples.channelsCount());
 
     return outSamples;
 }

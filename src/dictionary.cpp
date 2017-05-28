@@ -203,46 +203,46 @@ const char *Dictionary::get(const std::string & key, int flags) const noexcept
     return get(key.c_str(), flags);
 }
 
-string Dictionary::toString(const char keyValSep, const char pairsSep, OptionalErrorCode ec) const
-{
-    string  str;
-    char   *buf = nullptr;
+//string Dictionary::toString(const char keyValSep, const char pairsSep, OptionalErrorCode ec) const
+//{
+//    string  str;
+//    char   *buf = nullptr;
 
-    clear_if(ec);
+//    clear_if(ec);
 
-    int sts = av_dict_get_string(m_raw, &buf, keyValSep, pairsSep);
-    if (sts >= 0)
-    {
-        str = buf;
-        av_freep(&buf);
-    }
-    else
-    {
-        throws_if(ec, sts, ffmpeg_category());
-    }
+//    int sts = av_dict_get_string(m_raw, &buf, keyValSep, pairsSep);
+//    if (sts >= 0)
+//    {
+//        str = buf;
+//        av_freep(&buf);
+//    }
+//    else
+//    {
+//        throws_if(ec, sts, ffmpeg_category());
+//    }
 
-    return std::move(str);
-}
+//    return std::move(str);
+//}
 
-Dictionary::RawStringPtr Dictionary::toRawStringPtr(const char keyValSep, const char pairsSep, OptionalErrorCode ec) const
-{
-    RawStringPtr  str;
-    char         *buf = nullptr;
+//Dictionary::RawStringPtr Dictionary::toRawStringPtr(const char keyValSep, const char pairsSep, OptionalErrorCode ec) const
+//{
+//    RawStringPtr  str;
+//    char         *buf = nullptr;
 
-    clear_if(ec);
+//    clear_if(ec);
 
-    int sts = av_dict_get_string(m_raw, &buf, keyValSep, pairsSep);
-    if (sts >= 0)
-    {
-        str.reset(buf); // take owning
-    }
-    else
-    {
-        throws_if(ec, sts, ffmpeg_category());
-    }
+//    int sts = av_dict_get_string(m_raw, &buf, keyValSep, pairsSep);
+//    if (sts >= 0)
+//    {
+//        str.reset(buf); // take owning
+//    }
+//    else
+//    {
+//        throws_if(ec, sts, ffmpeg_category());
+//    }
 
-    return std::move(str);
-}
+//    return std::move(str);
+//}
 
 int Dictionary::set_priv(const char * key, const char * value, int flags) noexcept
 {
@@ -264,7 +264,12 @@ int Dictionary::set_priv(const std::string & key, const std::string & value, int
 int Dictionary::set_priv(const char * key, int64_t value, int flags) noexcept
 {
     auto prev = m_raw;
-    int sts = av_dict_set_int(&m_raw, key, value, flags);
+
+    char valuestr[22];
+    snprintf(valuestr, sizeof(valuestr), "%"PRId64, value);
+    flags &= ~AV_DICT_DONT_STRDUP_VAL;
+
+    int sts = av_dict_set(&m_raw, key, valuestr, flags);
     if (sts >= 0 && prev == nullptr) {
         m_owning = true;
     }
@@ -278,27 +283,27 @@ int Dictionary::set_priv(const std::string & key, int64_t value, int flags) noex
     return set_priv(key.c_str(), value, flags);
 }
 
-int Dictionary::parseString_priv(const char *str, const char *keyvalSep, const char *pairsSep, int flags)
-{
-    auto prev = m_raw;
-    int sts = av_dict_parse_string(&m_raw,
-                                   str,
-                                   keyvalSep,
-                                   pairsSep,
-                                   flags);
-    if (sts >= 0 && prev == nullptr)
-        m_owning = true;
-    return sts;
-}
+//int Dictionary::parseString_priv(const char *str, const char *keyvalSep, const char *pairsSep, int flags)
+//{
+//    auto prev = m_raw;
+//    int sts = av_dict_parse_string(&m_raw,
+//                                   str,
+//                                   keyvalSep,
+//                                   pairsSep,
+//                                   flags);
+//    if (sts >= 0 && prev == nullptr)
+//        m_owning = true;
+//    return sts;
+//}
 
-void Dictionary::parseString_priv(OptionalErrorCode ec, const char *str, const char *keyvalSep, const char *pairsSep, int flags)
-{
-    clear_if(ec);
-    int sts;
-    if ((sts = parseString_priv(str, keyvalSep, pairsSep, flags)) < 0) {
-        throws_if(ec, sts, ffmpeg_category());
-    }
-}
+//void Dictionary::parseString_priv(OptionalErrorCode ec, const char *str, const char *keyvalSep, const char *pairsSep, int flags)
+//{
+//    clear_if(ec);
+//    int sts;
+//    if ((sts = parseString_priv(str, keyvalSep, pairsSep, flags)) < 0) {
+//        throws_if(ec, sts, ffmpeg_category());
+//    }
+//}
 
 void Dictionary::copyFrom(const Dictionary & other, int flags) noexcept
 {

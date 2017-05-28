@@ -32,7 +32,7 @@ public:
     int index() const;
     int id() const;
 
-    Rational    frameRate()          const;
+//    Rational    frameRate()          const;
     Rational    timeBase()           const;
     Rational    sampleAspectRatio()  const;
     Timestamp   startTime()          const;
@@ -49,7 +49,7 @@ public:
     Direction   direction() const { return m_direction; }
 
     void setTimeBase(const Rational &timeBase);
-    void setFrameRate(const Rational &frameRate);
+//    void setFrameRate(const Rational &frameRate);
     void setSampleAspectRatio(const Rational &aspectRatio);
 
     /**

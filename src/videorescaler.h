@@ -32,7 +32,7 @@ enum SwsFlags
     SwsFlagFullChromaInt = SWS_FULL_CHR_H_INT,
     SwsFlagFullChromaInp = SWS_FULL_CHR_H_INP,
     SwsFlagBitexact = SWS_BITEXACT,
-    SwsFlagErrorDiffusion = SWS_ERROR_DIFFUSION,
+//    SwsFlagErrorDiffusion = SWS_ERROR_DIFFUSION,
 };
 
 class VideoRescaler : public FFWrapperPtr<SwsContext>, public noncopyable

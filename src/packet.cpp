@@ -1,5 +1,7 @@
 #include "packet.h"
 
+#define FF_INPUT_BUFFER_PADDING_SIZE 32
+
 using namespace std;
 
 namespace av {
@@ -72,6 +74,93 @@ void Packet::initCommon()
     m_completeFlag = false;
     m_timeBase     = Rational(0, 0);
     //m_fakePts      = AV_NOPTS_VALUE;
+}
+
+#define ALLOC_MALLOC(data, size) data = av_malloc(size)
+
+#define ALLOC_BUF(data, size)                \
+do {                                         \
+    av_buffer_realloc(&pkt->buf, size);      \
+    data = pkt->buf ? pkt->buf->data : NULL; \
+} while (0)
+
+#define DUP_DATA(dst, src, size, padding, ALLOC)                        \
+    do {                                                                \
+        void *data;                                                     \
+        if (padding) {                                                  \
+            if ((unsigned)(size) >                                      \
+                (unsigned)(size) + AV_INPUT_BUFFER_PADDING_SIZE)        \
+                goto failed_alloc;                                      \
+            ALLOC(data, size + AV_INPUT_BUFFER_PADDING_SIZE);           \
+        } else {                                                        \
+            ALLOC(data, size);                                          \
+        }                                                               \
+        if (!data)                                                      \
+            goto failed_alloc;                                          \
+        memcpy(data, src, size);                                        \
+        if (padding)                                                    \
+            memset((uint8_t *)data + size, 0,                           \
+                   AV_INPUT_BUFFER_PADDING_SIZE);                       \
+        dst = (typeof(dst))data;                                           \
+    } while (0)
+
+int av_copy_packet_side_data(AVPacket *pkt, const AVPacket *src)
+{
+    if (src->side_data_elems) {
+        int i;
+        DUP_DATA(pkt->side_data, src->side_data,
+                src->side_data_elems * sizeof(*src->side_data), 0, ALLOC_MALLOC);
+        if (src != pkt) {
+            memset(pkt->side_data, 0,
+                   src->side_data_elems * sizeof(*src->side_data));
+        }
+        for (i = 0; i < src->side_data_elems; i++) {
+            DUP_DATA(pkt->side_data[i].data, src->side_data[i].data,
+                    src->side_data[i].size, 1, ALLOC_MALLOC);
+            pkt->side_data[i].size = src->side_data[i].size;
+            pkt->side_data[i].type = src->side_data[i].type;
+        }
+    }
+    pkt->side_data_elems = src->side_data_elems;
+    return 0;
+
+failed_alloc:
+    av_packet_unref(pkt);
+    return AVERROR(ENOMEM);
+}
+
+static static int copy_packet_data(AVPacket *pkt, const AVPacket *src, int dup)
+{
+    pkt->data      = NULL;
+    pkt->side_data = NULL;
+    pkt->side_data_elems = 0;
+    if (pkt->buf) {
+        AVBufferRef *ref = av_buffer_ref(src->buf);
+        if (!ref)
+            return AVERROR(ENOMEM);
+        pkt->buf  = ref;
+        pkt->data = ref->data;
+    } else {
+        DUP_DATA(pkt->data, src->data, pkt->size, 1, ALLOC_BUF);
+    }
+    if (src->side_data_elems && dup) {
+        pkt->side_data = src->side_data;
+        pkt->side_data_elems = src->side_data_elems;
+    }
+    if (src->side_data_elems && !dup) {
+        return av_copy_packet_side_data(pkt, src);
+    }
+    return 0;
+
+failed_alloc:
+    av_packet_unref(pkt);
+    return AVERROR(ENOMEM);
+}
+
+int av_copy_packet(AVPacket *dst, const AVPacket *src)
+{
+    *dst = *src;
+    return copy_packet_data(dst, src, 0);
 }
 
 void Packet::initFromAVPacket(const AVPacket *packet, bool deepCopy, OptionalErrorCode ec)
@@ -252,7 +341,7 @@ void Packet::dump(const Stream &st, bool dumpPayload) const
     if (!st.isNull())
     {
         const AVStream *stream = st.raw();
-        av_pkt_dump2(stdout, const_cast<AVPacket*>(&m_raw), dumpPayload ? 1 : 0, stream);
+        av_pkt_dump2(stdout, const_cast<AVPacket*>(&m_raw), dumpPayload ? 1 : 0, const_cast<AVStream*>(stream));
     }
 }
 
@@ -274,13 +363,13 @@ bool Packet::isReferenced() const
     return m_raw.buf;
 }
 
-int Packet::refCount() const
-{
-    if (m_raw.buf)
-        return av_buffer_get_ref_count(m_raw.buf);
-    else
-        return 0;
-}
+//int Packet::refCount() const
+//{
+//    if (m_raw.buf)
+//        return av_buffer_get_ref_count(m_raw.buf);
+//    else
+//        return 0;
+//}
 
 AVPacket Packet::makeRef(OptionalErrorCode ec) const
 {

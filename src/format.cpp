@@ -10,8 +10,7 @@ bool codec_supported(const AVCodecTag * const *codecTag, const FmtCodec &codec)
     if (!codecTag) // any codec supported
         return true;
 
-    unsigned int tag;
-    return !!av_codec_get_tag2(codecTag, codec.id(), &tag);
+    return av_codec_get_tag(codecTag, codec.id()) != 0;
 }
 
 } // ::internal

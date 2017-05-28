@@ -196,8 +196,8 @@ int AudioSamples::init(SampleFormat sampleFormat, int samplesCount, uint64_t cha
     m_raw->format      = sampleFormat;
     m_raw->nb_samples  = samplesCount;
 
-    av_frame_set_sample_rate(m_raw, sampleRate);
-    av_frame_set_channel_layout(m_raw, channelLayout);
+    m_raw->sample_rate = sampleRate;
+    m_raw->channel_layout = channelLayout;
 
     av_frame_get_buffer(m_raw, align);
     return 0;
@@ -254,17 +254,17 @@ int AudioSamples::samplesCount() const
 
 int AudioSamples::channelsCount() const
 {
-    return m_raw ? av_frame_get_channels(m_raw) : 0;
+    return m_raw ? av_get_channel_layout_nb_channels(m_raw->channel_layout) : 0;
 }
 
 int64_t AudioSamples::channelsLayout() const
 {
-    return m_raw ? av_frame_get_channel_layout(m_raw) : 0;
+    return m_raw ? m_raw->channel_layout : 0;
 }
 
 int AudioSamples::sampleRate() const
 {
-    return m_raw ? av_frame_get_sample_rate(m_raw) : 0;
+    return m_raw ? m_raw->sample_rate : 0;
 }
 
 size_t AudioSamples::sampleBitDepth(OptionalErrorCode ec) const
@@ -281,8 +281,8 @@ string AudioSamples::channelsLayoutString() const
     char buf[128] = {0};
     av_get_channel_layout_string(buf,
                                  sizeof(buf),
-                                 av_frame_get_channels(m_raw),
-                                 av_frame_get_channel_layout(m_raw));
+                                 channelsCount(),
+                                 channelsLayout());
     return string(buf);
 }
 

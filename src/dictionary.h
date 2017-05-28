@@ -396,69 +396,69 @@ public:
         }
     }
 
-    /**
-     * @brief parseString - process string with options and fill dictionary
-     * String examples:
-     * @code
-     * foo=bar;foo2=bar2
-     * foo:bar&foo2:bar2
-     * @endcode
-     *
-     * @param str       string to process
-     * @param keyValSep null-terminated string with chars that interprets as key and value separators
-     *                  '=' and ':' in most cases.
-     * @param pairsSep  null-terminates string with chars that interprets as pairs (key and value)
-     *                  separators. ';' and ',' in most cases.
-     * @param flags     See Flags. All flags that omit strdups ignores.
-     * @param[in,out] ec     this represents the error status on exit, if this is pre-initialized to
-     *                       av#throws the function will throw on error instead
-     * @return 0 on success, <0 on fail
-     */
-    template<typename Str, typename Sep1, typename Sep2>
-    void parseString(const Str& str, const Sep1& keyvalSep, const Sep2& pairsSep, int flags = 0, OptionalErrorCode ec = throws())
-    {
-        parseString_priv(ec,
-                         _to_const_char_ptr(str),
-                         _to_const_char_ptr(keyvalSep),
-                         _to_const_char_ptr(pairsSep),
-                         flags);
-    }
+//    /**
+//     * @brief parseString - process string with options and fill dictionary
+//     * String examples:
+//     * @code
+//     * foo=bar;foo2=bar2
+//     * foo:bar&foo2:bar2
+//     * @endcode
+//     *
+//     * @param str       string to process
+//     * @param keyValSep null-terminated string with chars that interprets as key and value separators
+//     *                  '=' and ':' in most cases.
+//     * @param pairsSep  null-terminates string with chars that interprets as pairs (key and value)
+//     *                  separators. ';' and ',' in most cases.
+//     * @param flags     See Flags. All flags that omit strdups ignores.
+//     * @param[in,out] ec     this represents the error status on exit, if this is pre-initialized to
+//     *                       av#throws the function will throw on error instead
+//     * @return 0 on success, <0 on fail
+//     */
+//    template<typename Str, typename Sep1, typename Sep2>
+//    void parseString(const Str& str, const Sep1& keyvalSep, const Sep2& pairsSep, int flags = 0, OptionalErrorCode ec = throws())
+//    {
+//        parseString_priv(ec,
+//                         _to_const_char_ptr(str),
+//                         _to_const_char_ptr(keyvalSep),
+//                         _to_const_char_ptr(pairsSep),
+//                         flags);
+//    }
 
-    /**
-     * @brief toString - converts dictionary to the string representation (serialize)
-     *
-     * This line can be processed via parseString() later.
-     *
-     * FFmpeg internaly allocated buffer copies to the string and freed.
-     *
-     * @param[in]  keyValSep   char to separate key and value
-     * @param[in] pairsSep    chat to separate key-value pairs.
-     * @param[in,out] ec     this represents the error status on exit, if this is pre-initialized to
-     *                       av#throws the function will throw on error instead
-     * @return valid string, null-string (std::string()) on error
-     *
-     * @note \\0 and same separator chars unapplicable.
-     *
-     */
-    std::string toString(const char keyValSep, const char pairsSep, OptionalErrorCode ec = throws()) const;
+//    /**
+//     * @brief toString - converts dictionary to the string representation (serialize)
+//     *
+//     * This line can be processed via parseString() later.
+//     *
+//     * FFmpeg internaly allocated buffer copies to the string and freed.
+//     *
+//     * @param[in]  keyValSep   char to separate key and value
+//     * @param[in] pairsSep    chat to separate key-value pairs.
+//     * @param[in,out] ec     this represents the error status on exit, if this is pre-initialized to
+//     *                       av#throws the function will throw on error instead
+//     * @return valid string, null-string (std::string()) on error
+//     *
+//     * @note \\0 and same separator chars unapplicable.
+//     *
+//     */
+//    std::string toString(const char keyValSep, const char pairsSep, OptionalErrorCode ec = throws()) const;
 
-    /**
-     * @brief toRawStringPtr - converts dictionary to the raw string (char*) and protect it with
-     * smart pointer (std::unique_ptr).
-     *
-     * This method omit data copy and returns raw pointer that allocated by av_dict_get_string(). For
-     * more safety this block wrapped with no-overhead smart pointer (std::unique_ptr).
-     *
-     * @see toString()
-     *
-     * @param[in]  keyValSep   char to separate key and value
-     * @param[in]  pairsSep    chat to separate key-value pairs.
-     * @param[in,out] ec     this represents the error status on exit, if this is pre-initialized to
-     *                       av#throws the function will throw on error instead
-     *
-     * @return valid string, null on error (check ec)
-     */
-    RawStringPtr toRawStringPtr(const char keyValSep, const char pairsSep, OptionalErrorCode ec = throws()) const;
+//    /**
+//     * @brief toRawStringPtr - converts dictionary to the raw string (char*) and protect it with
+//     * smart pointer (std::unique_ptr).
+//     *
+//     * This method omit data copy and returns raw pointer that allocated by av_dict_get_string(). For
+//     * more safety this block wrapped with no-overhead smart pointer (std::unique_ptr).
+//     *
+//     * @see toString()
+//     *
+//     * @param[in]  keyValSep   char to separate key and value
+//     * @param[in]  pairsSep    chat to separate key-value pairs.
+//     * @param[in,out] ec     this represents the error status on exit, if this is pre-initialized to
+//     *                       av#throws the function will throw on error instead
+//     *
+//     * @return valid string, null on error (check ec)
+//     */
+//    RawStringPtr toRawStringPtr(const char keyValSep, const char pairsSep, OptionalErrorCode ec = throws()) const;
 
     /**
      * @brief copyFrom - copy data from other dictionary.
@@ -505,8 +505,8 @@ private:
         return str.c_str();
     }
 
-    int  parseString_priv(const char* str, const char* keyvalSep, const char* pairsSep, int flags);
-    void parseString_priv(OptionalErrorCode ec, const char* str, const char* keyvalSep, const char* pairsSep, int flags);
+//    int  parseString_priv(const char* str, const char* keyvalSep, const char* pairsSep, int flags);
+//    void parseString_priv(OptionalErrorCode ec, const char* str, const char* keyvalSep, const char* pairsSep, int flags);
 
 
 private:

@@ -18,7 +18,7 @@ extern "C" {
 
 namespace av
 {
-
+const AVPictureType AV_PICTURE_TYPE_NONE = (AVPictureType)0;
 template<typename T>
 class Frame : public FFWrapperPtr<AVFrame>
 {
@@ -99,12 +99,12 @@ public:
         return m_raw && m_raw->buf[0];
     }
 
-    int refCount() const {
-        if (m_raw && m_raw->buf[0])
-            return av_buffer_get_ref_count(m_raw->buf[0]);
-        else
-            return 0;
-    }
+//    int refCount() const {
+//        if (m_raw && m_raw->buf[0])
+//            return av_buffer_get_ref_count(m_raw->buf[0]);
+//        else
+//            return 0;
+//    }
 
     AVFrame* makeRef() const {
         return m_raw ? av_frame_clone(m_raw) : nullptr;
@@ -119,7 +119,6 @@ public:
         result.m_raw->height         = m_raw->height;
         result.m_raw->nb_samples     = m_raw->nb_samples;
         result.m_raw->channel_layout = m_raw->channel_layout;
-        result.m_raw->channels       = m_raw->channels;
 
         result.copyInfoFrom(static_cast<const T&>(*this));
 
@@ -131,7 +130,7 @@ public:
 
     Timestamp pts() const
     {
-        return {RAW_GET(pts, AV_NOPTS_VALUE), m_timeBase};
+        return {RAW_GET(pts, (const int64_t)AV_NOPTS_VALUE), m_timeBase};
     }
 
     void setPts(int64_t pts, Rational ptsTimeBase) attribute_deprecated
@@ -155,26 +154,26 @@ public:
 
         int64_t rescaledPts          = AV_NOPTS_VALUE;
         int64_t rescaledFakePts      = AV_NOPTS_VALUE;
-        int64_t rescaledBestEffortTs = AV_NOPTS_VALUE;
+//        int64_t rescaledBestEffortTs = AV_NOPTS_VALUE;
 
         if (m_timeBase != Rational() && value != Rational()) {
             if (m_raw->pts != AV_NOPTS_VALUE)
                 rescaledPts = m_timeBase.rescale(m_raw->pts, value);
 
-            if (m_raw->best_effort_timestamp != AV_NOPTS_VALUE)
-                rescaledBestEffortTs = m_timeBase.rescale(m_raw->best_effort_timestamp, value);
+//            if (m_raw->best_effort_timestamp != AV_NOPTS_VALUE)
+//                rescaledBestEffortTs = m_timeBase.rescale(m_raw->best_effort_timestamp, value);
 
             if (m_fakePts != AV_NOPTS_VALUE)
                 rescaledFakePts = m_timeBase.rescale(m_fakePts, value);
         } else {
             rescaledPts          = m_raw->pts;
             rescaledFakePts      = m_fakePts;
-            rescaledBestEffortTs = m_raw->best_effort_timestamp;
+//            rescaledBestEffortTs = m_raw->best_effort_timestamp;
         }
 
         if (m_timeBase != Rational()) {
             m_raw->pts                   = rescaledPts;
-            m_raw->best_effort_timestamp = rescaledBestEffortTs;
+//            m_raw->best_effort_timestamp = rescaledBestEffortTs;
             m_fakePts                    = rescaledFakePts;
         }
 
@@ -261,7 +260,7 @@ protected:
     Rational             m_timeBase;
     int                  m_streamIndex {-1};
     bool                 m_isComplete  {false};
-    int64_t              m_fakePts     {AV_NOPTS_VALUE};
+    int64_t              m_fakePts     {(int64_t)AV_NOPTS_VALUE};
 };
 
 
@@ -291,7 +290,7 @@ public:
     void                   setQuality(int quality);
 
     AVPictureType          pictureType() const;
-    void                   setPictureType(AVPictureType type = AV_PICTURE_TYPE_NONE);
+    void                   setPictureType(AVPictureType type);
 };
 
 // Be a little back compat

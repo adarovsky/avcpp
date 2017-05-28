@@ -23,10 +23,10 @@ const char *SampleFormat::name(OptionalErrorCode ec) const
     return nullptr;
 }
 
-SampleFormat SampleFormat::alternativeSampleFormat(bool isPlanar) const noexcept
-{
-    return av_get_alt_sample_fmt(m_fmt, isPlanar);
-}
+//SampleFormat SampleFormat::alternativeSampleFormat(bool isPlanar) const noexcept
+//{
+//    return av_get_alt_sample_fmt(m_fmt, isPlanar);
+//}
 
 SampleFormat SampleFormat::packedSampleFormat() const noexcept
 {

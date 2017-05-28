@@ -26,10 +26,10 @@ int Stream::id() const
     return RAW_GET2(isValid(), id, -1);
 }
 
-Rational Stream::frameRate() const
-{
-    return RAW_GET2(isValid(), r_frame_rate, AVRational{});
-}
+//Rational Stream::frameRate() const
+//{
+//    return RAW_GET2(isValid(), r_frame_rate, AVRational{});
+//}
 
 Rational Stream::timeBase() const
 {
@@ -43,17 +43,17 @@ Rational Stream::sampleAspectRatio() const
 
 Timestamp Stream::startTime() const
 {
-    return {RAW_GET2(isValid(), start_time, AV_NOPTS_VALUE), timeBase()};
+    return {RAW_GET2(isValid(), start_time, (int64_t)AV_NOPTS_VALUE), timeBase()};
 }
 
 Timestamp Stream::duration() const
 {
-    return {RAW_GET2(isValid(), duration, AV_NOPTS_VALUE), timeBase()};
+    return {RAW_GET2(isValid(), duration, (int64_t)AV_NOPTS_VALUE), timeBase()};
 }
 
 Timestamp Stream::currentDts() const
 {
-    return {RAW_GET2(isValid(), cur_dts, AV_NOPTS_VALUE), timeBase()};
+    return {RAW_GET2(isValid(), cur_dts, (int64_t)AV_NOPTS_VALUE), timeBase()};
 }
 
 AVMediaType Stream::mediaType() const
@@ -97,10 +97,10 @@ void Stream::setTimeBase(const Rational &timeBase)
     RAW_SET2(isValid(), time_base, timeBase.getValue());
 }
 
-void Stream::setFrameRate(const Rational &frameRate)
-{
-    RAW_SET2(isValid(), r_frame_rate, frameRate.getValue());
-}
+//void Stream::setFrameRate(const Rational &frameRate)
+//{
+//    RAW_SET2(isValid(), r_frame_rate, frameRate.getValue());
+//}
 
 void Stream::setSampleAspectRatio(const Rational &aspectRatio)
 {

@@ -13,13 +13,13 @@
 
 extern "C" {
 #include <libavcodec/avcodec.h>
+#include <libavutil/channel_layout.h>
 #include <libavformat/version.h>
 }
 
 #include "codeccontext_deprecated.h"
 
 namespace av {
-
 class CodecContext2 : public FFWrapperPtr<AVCodecContext>, public noncopyable
 {
 protected:
@@ -169,8 +169,8 @@ public:
 
         AVFrame *frame = outFrame.raw();
 
-        if (frame->pts == AV_NOPTS_VALUE)
-            frame->pts = av_frame_get_best_effort_timestamp(frame);
+//        if (frame->pts == AV_NOPTS_VALUE)
+//            frame->pts = av_frame_get_best_effort_timestamp(frame);
 
         // Or: AVCODEC < 57.24.0 if this macro will be removes in future
 #if !defined(FF_API_PKT_PTS)
@@ -212,7 +212,15 @@ public:
             outPacket.setStreamIndex(inFrame.streamIndex());
         } else if (m_stream.isValid()) {
 #if USE_CODECPAR
-            outPacket.setTimeBase(av_stream_get_codec_timebase(m_stream.raw()));
+            // See avformat_transfer_internal_stream_timing_info() TODO.
+        #if FF_API_LAVF_AVCTX
+        FF_DISABLE_DEPRECATION_WARNINGS
+            auto tb = m_stream.raw()->codec->time_base;
+        FF_ENABLE_DEPRECATION_WARNINGS
+        #else
+            auto tb = m_stream.raw()->internal->avctx->time_base;
+        #endif
+            outPacket.setTimeBase(tb);
 #else
             FF_DISABLE_DEPRECATION_WARNINGS
             if (m_stream.raw()->codec) {

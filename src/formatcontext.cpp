@@ -697,62 +697,62 @@ void FormatContext::writePacketDirect(const Packet &pkt, OptionalErrorCode ec)
     writePacket(pkt, ec, av_write_frame);
 }
 
-bool FormatContext::checkUncodedFrameWriting(size_t streamIndex, error_code &ec) noexcept
-{
-    ec.clear();
+//bool FormatContext::checkUncodedFrameWriting(size_t streamIndex, error_code &ec) noexcept
+//{
+//    ec.clear();
 
-    if (!m_raw)
-    {
-        ec = make_avcpp_error(Errors::Unallocated);
-        return false;
-    }
+//    if (!m_raw)
+//    {
+//        ec = make_avcpp_error(Errors::Unallocated);
+//        return false;
+//    }
 
-    if (!isOpened())
-    {
-        ec = make_avcpp_error(Errors::FormatNotOpened);
-        return false;
-    }
+//    if (!isOpened())
+//    {
+//        ec = make_avcpp_error(Errors::FormatNotOpened);
+//        return false;
+//    }
 
-    if (!m_headerWriten)
-    {
-        fflog(AV_LOG_ERROR, "Header not writen to output. Try to call writeHeader()\n");
-        ec = make_avcpp_error(Errors::FormatHeaderNotWriten);
-        return false;
-    }
+//    if (!m_headerWriten)
+//    {
+//        fflog(AV_LOG_ERROR, "Header not writen to output. Try to call writeHeader()\n");
+//        ec = make_avcpp_error(Errors::FormatHeaderNotWriten);
+//        return false;
+//    }
 
-    int sts = av_write_uncoded_frame_query(m_raw, streamIndex);
-    bool result = sts < 0 ? false : true;
-    if (!result)
-        ec = make_ffmpeg_error(sts);
+//    int sts = av_write_uncoded_frame_query(m_raw, streamIndex);
+//    bool result = sts < 0 ? false : true;
+//    if (!result)
+//        ec = make_ffmpeg_error(sts);
 
-    return result;
-}
+//    return result;
+//}
 
-bool FormatContext::checkUncodedFrameWriting(size_t streamIndex) noexcept
-{
-    error_code ec;
-    return checkUncodedFrameWriting(streamIndex, ec);
-}
+//bool FormatContext::checkUncodedFrameWriting(size_t streamIndex) noexcept
+//{
+//    error_code ec;
+//    return checkUncodedFrameWriting(streamIndex, ec);
+//}
 
-void FormatContext::writeUncodedFrame(VideoFrame &frame, size_t streamIndex, OptionalErrorCode ec)
-{
-    writeFrame(frame.raw(), streamIndex, ec, av_interleaved_write_uncoded_frame);
-}
+//void FormatContext::writeUncodedFrame(VideoFrame &frame, size_t streamIndex, OptionalErrorCode ec)
+//{
+//    writeFrame(frame.raw(), streamIndex, ec, av_interleaved_write_uncoded_frame);
+//}
 
-void FormatContext::writeUncodedFrameDirect(VideoFrame &frame, size_t streamIndex, OptionalErrorCode ec)
-{
-    writeFrame(frame.raw(), streamIndex, ec, av_write_uncoded_frame);
-}
+//void FormatContext::writeUncodedFrameDirect(VideoFrame &frame, size_t streamIndex, OptionalErrorCode ec)
+//{
+//    writeFrame(frame.raw(), streamIndex, ec, av_write_uncoded_frame);
+//}
 
-void FormatContext::writeUncodedFrame(AudioSamples &frame, size_t streamIndex, OptionalErrorCode ec)
-{
-    writeFrame(frame.raw(), streamIndex, ec, av_interleaved_write_uncoded_frame);
-}
+//void FormatContext::writeUncodedFrame(AudioSamples &frame, size_t streamIndex, OptionalErrorCode ec)
+//{
+//    writeFrame(frame.raw(), streamIndex, ec, av_interleaved_write_uncoded_frame);
+//}
 
-void FormatContext::writeUncodedFrameDirect(AudioSamples &frame, size_t streamIndex, OptionalErrorCode ec)
-{
-    writeFrame(frame.raw(), streamIndex, ec, av_write_uncoded_frame);
-}
+//void FormatContext::writeUncodedFrameDirect(AudioSamples &frame, size_t streamIndex, OptionalErrorCode ec)
+//{
+//    writeFrame(frame.raw(), streamIndex, ec, av_write_uncoded_frame);
+//}
 
 void FormatContext::writePacket(const Packet &pkt, OptionalErrorCode ec, int(*write_proc)(AVFormatContext *, AVPacket *))
 {

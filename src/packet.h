@@ -82,7 +82,7 @@ public:
     void setTimeBase(const Rational &value);
 
     bool     isReferenced() const;
-    int      refCount() const;
+//    int      refCount() const;
     AVPacket makeRef(OptionalErrorCode ec = throws()) const;
     Packet   clone(OptionalErrorCode ec = throws()) const;
 

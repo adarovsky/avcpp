@@ -12,7 +12,7 @@
 
 namespace av {
 
-class AudioResampler : public FFWrapperPtr<SwrContext>, public noncopyable
+class AudioResampler : public FFWrapperPtr<AVAudioResampleContext>, public noncopyable
 {
 public:
     AudioResampler();

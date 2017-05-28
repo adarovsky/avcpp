@@ -181,7 +181,7 @@ Stream FormatContext::stream(size_t idx)
     return Stream(m_monitor, m_raw->streams[idx], isOutput() ? Direction::Encoding : Direction::Decoding);
 }
 
-Stream FormatContext::stream(size_t idx, error_code &ec)
+Stream FormatContext::stream(size_t idx, OptionalErrorCode ec)
 {
     if (!m_raw) {
         throws_if(ec, Errors::Unallocated);
@@ -196,7 +196,7 @@ Stream FormatContext::stream(size_t idx, error_code &ec)
     return stream(idx);
 }
 
-Stream FormatContext::addStream(const Codec &codec, error_code &ec)
+Stream FormatContext::addStream(const Codec &codec, OptionalErrorCode ec)
 {
     clear_if(ec);
     if (!m_raw)
@@ -243,31 +243,31 @@ bool FormatContext::seekable() const noexcept
     return false;
 }
 
-void FormatContext::seek(const Timestamp &timestamp, error_code &ec)
+void FormatContext::seek(const Timestamp &timestamp, OptionalErrorCode ec)
 {
     seek(timestamp.timestamp(AV_TIME_BASE_Q), -1, 0, ec);
 }
 
-void FormatContext::seek(const Timestamp& timestamp, size_t streamIndex, error_code &ec)
+void FormatContext::seek(const Timestamp& timestamp, size_t streamIndex, OptionalErrorCode ec)
 {
     auto st = stream(streamIndex, ec);
     if (st.isValid())
         seek(timestamp.timestamp(st.timeBase()), static_cast<int>(streamIndex), 0, ec);
 }
 
-void FormatContext::seek(const Timestamp& timestamp, bool anyFrame, error_code &ec)
+void FormatContext::seek(const Timestamp& timestamp, bool anyFrame, OptionalErrorCode ec)
 {
     seek(timestamp.timestamp(AV_TIME_BASE_Q), -1, anyFrame ? AVSEEK_FLAG_ANY : 0, ec);
 }
 
-void FormatContext::seek(const Timestamp &timestamp, size_t streamIndex, bool anyFrame, error_code &ec)
+void FormatContext::seek(const Timestamp &timestamp, size_t streamIndex, bool anyFrame, OptionalErrorCode ec)
 {
     auto st = stream(streamIndex);
     if (st.isValid())
         seek(timestamp.timestamp(st.timeBase()), static_cast<int>(streamIndex), anyFrame ? AVSEEK_FLAG_ANY : 0, ec);
 }
 
-void FormatContext::seek(int64_t position, int streamIndex, int flags, error_code &ec)
+void FormatContext::seek(int64_t position, int streamIndex, int flags, OptionalErrorCode ec)
 {
     clear_if(ec);
     const auto sts = av_seek_frame(m_raw, streamIndex, position, flags);
@@ -328,27 +328,27 @@ Timestamp FormatContext::duration() const noexcept
     return {duration, AV_TIME_BASE_Q};
 };
 
-void FormatContext::openInput(const string &uri, error_code &ec)
+void FormatContext::openInput(const string &uri, OptionalErrorCode ec)
 {
     openInput(uri, InputFormat(), ec);
 }
 
-void FormatContext::openInput(const string &uri, Dictionary &formatOptions, error_code &ec)
+void FormatContext::openInput(const string &uri, Dictionary &formatOptions, OptionalErrorCode ec)
 {
     openInput(uri, formatOptions, InputFormat(), ec);
 }
 
-void FormatContext::openInput(const string &uri, Dictionary &&formatOptions, error_code &ec)
+void FormatContext::openInput(const string &uri, Dictionary &&formatOptions, OptionalErrorCode ec)
 {
     openInput(uri, std::move(formatOptions), InputFormat(), ec);
 }
 
-void FormatContext::openInput(const string &uri, InputFormat format, error_code &ec)
+void FormatContext::openInput(const string &uri, InputFormat format, OptionalErrorCode ec)
 {
     openInput(uri, format, nullptr, ec);
 }
 
-void FormatContext::openInput(const string &uri, Dictionary &formatOptions, InputFormat format, error_code &ec)
+void FormatContext::openInput(const string &uri, Dictionary &formatOptions, InputFormat format, OptionalErrorCode ec)
 {
     auto dictptr = formatOptions.release();
 
@@ -359,13 +359,13 @@ void FormatContext::openInput(const string &uri, Dictionary &formatOptions, Inpu
     openInput(uri, format, &dictptr, ec);
 }
 
-void FormatContext::openInput(const string &uri, Dictionary &&formatOptions, InputFormat format, error_code &ec)
+void FormatContext::openInput(const string &uri, Dictionary &&formatOptions, InputFormat format, OptionalErrorCode ec)
 {
     // It calls non-movable vesion
     return openInput(uri, formatOptions, format, ec);
 }
 
-void FormatContext::openInput(const std::string &uri, InputFormat format, AVDictionary **options, error_code &ec)
+void FormatContext::openInput(const std::string &uri, InputFormat format, AVDictionary **options, OptionalErrorCode ec)
 {
     clear_if(ec);
 
@@ -392,7 +392,7 @@ void FormatContext::openInput(const std::string &uri, InputFormat format, AVDict
 
 void FormatContext::openInput(CustomIO       *io,
                               InputFormat     format,
-                              std::error_code &ec,
+                              OptionalErrorCode ec,
                               size_t           internalBufferSize)
 {
     openCustomIOInput(io, internalBufferSize, ec);
@@ -403,7 +403,7 @@ void FormatContext::openInput(CustomIO       *io,
 void FormatContext::openInput(CustomIO        *io,
                               Dictionary      &formatOptions,
                               InputFormat      format,
-                              std::error_code &ec,
+                              OptionalErrorCode ec,
                               size_t           internalBufferSize)
 {
     openCustomIOInput(io, internalBufferSize, ec);
@@ -411,21 +411,21 @@ void FormatContext::openInput(CustomIO        *io,
         openInput(string(), formatOptions, format, ec);
 }
 
-void FormatContext::openInput(CustomIO        *io,
-                              Dictionary     &&formatOptions,
-                              InputFormat      format,
-                              std::error_code  &ec,
+void FormatContext::openInput(CustomIO         *io,
+                              Dictionary      &&formatOptions,
+                              InputFormat       format,
+                              OptionalErrorCode ec,
                               size_t            internalBufferSize)
 {
     openInput(io, formatOptions, format, ec, internalBufferSize);
 }
 
-void FormatContext::findStreamInfo(error_code &ec)
+void FormatContext::findStreamInfo(OptionalErrorCode ec)
 {
     findStreamInfo(nullptr, 0, ec);
 }
 
-void FormatContext::findStreamInfo(DictionaryArray &streamsOptions, error_code &ec)
+void FormatContext::findStreamInfo(DictionaryArray &streamsOptions, OptionalErrorCode ec)
 {
     auto ptrs = streamsOptions.release();
     auto count = streamsOptions.size();
@@ -437,12 +437,12 @@ void FormatContext::findStreamInfo(DictionaryArray &streamsOptions, error_code &
     findStreamInfo(ptrs, count, ec);
 }
 
-void FormatContext::findStreamInfo(DictionaryArray &&streamsOptions, error_code &ec)
+void FormatContext::findStreamInfo(DictionaryArray &&streamsOptions, OptionalErrorCode ec)
 {
     findStreamInfo(streamsOptions, ec);
 }
 
-Packet FormatContext::readPacket(error_code &ec)
+Packet FormatContext::readPacket(OptionalErrorCode ec)
 {
     clear_if(ec);
 
@@ -531,12 +531,12 @@ Packet FormatContext::readPacket(error_code &ec)
     return packet;
 }
 
-void FormatContext::openOutput(const string &uri, error_code &ec)
+void FormatContext::openOutput(const string &uri, OptionalErrorCode ec)
 {
     return openOutput(uri, OutputFormat(), nullptr, ec);
 }
 
-void FormatContext::openOutput(const string &uri, Dictionary &options, error_code &ec)
+void FormatContext::openOutput(const string &uri, Dictionary &options, OptionalErrorCode ec)
 {
     auto ptr = options.release();
     try
@@ -551,12 +551,12 @@ void FormatContext::openOutput(const string &uri, Dictionary &options, error_cod
     }
 }
 
-void FormatContext::openOutput(const string &uri, Dictionary &&options, error_code &ec)
+void FormatContext::openOutput(const string &uri, Dictionary &&options, OptionalErrorCode ec)
 {
     return openOutput(uri, options, ec);
 }
 
-void FormatContext::openOutput(const string &uri, OutputFormat format, AVDictionary **options, error_code &ec)
+void FormatContext::openOutput(const string &uri, OutputFormat format, AVDictionary **options, OptionalErrorCode ec)
 {
     clear_if(ec);
     if (!m_raw)
@@ -619,7 +619,7 @@ void FormatContext::openOutput(const string &uri, OutputFormat format, AVDiction
     m_isOpened = true;
 }
 
-void FormatContext::openOutput(CustomIO *io, error_code &ec, size_t internalBufferSize)
+void FormatContext::openOutput(CustomIO *io, OptionalErrorCode ec, size_t internalBufferSize)
 {
     openCustomIOOutput(io, internalBufferSize, ec);
     if (!is_error(ec))
@@ -629,12 +629,12 @@ void FormatContext::openOutput(CustomIO *io, error_code &ec, size_t internalBuff
     }
 }
 
-void FormatContext::writeHeader(error_code &ec)
+void FormatContext::writeHeader(OptionalErrorCode ec)
 {
     writeHeader(nullptr, ec);
 }
 
-void FormatContext::writeHeader(Dictionary &options, error_code &ec)
+void FormatContext::writeHeader(Dictionary &options, OptionalErrorCode ec)
 {
     auto ptr = options.release();
 
@@ -646,13 +646,13 @@ void FormatContext::writeHeader(Dictionary &options, error_code &ec)
     writeHeader(&ptr, ec);
 }
 
-void FormatContext::writeHeader(Dictionary &&options, error_code &ec)
+void FormatContext::writeHeader(Dictionary &&options, OptionalErrorCode ec)
 {
     writeHeader(options, ec);
 }
 
 
-void FormatContext::writeHeader(AVDictionary **options, error_code &ec)
+void FormatContext::writeHeader(AVDictionary **options, OptionalErrorCode ec)
 {
     clear_if(ec);
 
@@ -677,22 +677,22 @@ void FormatContext::writeHeader(AVDictionary **options, error_code &ec)
     m_headerWriten = true;
 }
 
-void FormatContext::writePacket(error_code &ec)
+void FormatContext::writePacket(OptionalErrorCode ec)
 {
     writePacket(Packet(), ec);
 }
 
-void FormatContext::writePacket(const Packet &pkt, error_code &ec)
+void FormatContext::writePacket(const Packet &pkt, OptionalErrorCode ec)
 {
     writePacket(pkt, ec, av_interleaved_write_frame);
 }
 
-void FormatContext::writePacketDirect(error_code &ec)
+void FormatContext::writePacketDirect(OptionalErrorCode ec)
 {
     writePacketDirect(Packet(), ec);
 }
 
-void FormatContext::writePacketDirect(const Packet &pkt, error_code &ec)
+void FormatContext::writePacketDirect(const Packet &pkt, OptionalErrorCode ec)
 {
     writePacket(pkt, ec, av_write_frame);
 }
@@ -734,27 +734,27 @@ bool FormatContext::checkUncodedFrameWriting(size_t streamIndex) noexcept
     return checkUncodedFrameWriting(streamIndex, ec);
 }
 
-void FormatContext::writeUncodedFrame(VideoFrame &frame, size_t streamIndex, error_code &ec)
+void FormatContext::writeUncodedFrame(VideoFrame &frame, size_t streamIndex, OptionalErrorCode ec)
 {
     writeFrame(frame.raw(), streamIndex, ec, av_interleaved_write_uncoded_frame);
 }
 
-void FormatContext::writeUncodedFrameDirect(VideoFrame &frame, size_t streamIndex, error_code &ec)
+void FormatContext::writeUncodedFrameDirect(VideoFrame &frame, size_t streamIndex, OptionalErrorCode ec)
 {
     writeFrame(frame.raw(), streamIndex, ec, av_write_uncoded_frame);
 }
 
-void FormatContext::writeUncodedFrame(AudioSamples &frame, size_t streamIndex, error_code &ec)
+void FormatContext::writeUncodedFrame(AudioSamples &frame, size_t streamIndex, OptionalErrorCode ec)
 {
     writeFrame(frame.raw(), streamIndex, ec, av_interleaved_write_uncoded_frame);
 }
 
-void FormatContext::writeUncodedFrameDirect(AudioSamples &frame, size_t streamIndex, error_code &ec)
+void FormatContext::writeUncodedFrameDirect(AudioSamples &frame, size_t streamIndex, OptionalErrorCode ec)
 {
     writeFrame(frame.raw(), streamIndex, ec, av_write_uncoded_frame);
 }
 
-void FormatContext::writePacket(const Packet &pkt, error_code &ec, int(*write_proc)(AVFormatContext *, AVPacket *))
+void FormatContext::writePacket(const Packet &pkt, OptionalErrorCode ec, int(*write_proc)(AVFormatContext *, AVPacket *))
 {
     clear_if(ec);
 
@@ -802,7 +802,7 @@ void FormatContext::writePacket(const Packet &pkt, error_code &ec, int(*write_pr
         throws_if(ec, sts, ffmpeg_category());
 }
 
-void FormatContext::writeFrame(AVFrame *frame, int streamIndex, error_code &ec, int (*write_proc)(AVFormatContext *, int, AVFrame *))
+void FormatContext::writeFrame(AVFrame *frame, int streamIndex, OptionalErrorCode ec, int (*write_proc)(AVFormatContext *, int, AVFrame *))
 {
     clear_if(ec);
 
@@ -831,7 +831,7 @@ void FormatContext::writeFrame(AVFrame *frame, int streamIndex, error_code &ec, 
         throws_if(ec, sts, ffmpeg_category());
 }
 
-void FormatContext::writeTrailer(error_code &ec)
+void FormatContext::writeTrailer(OptionalErrorCode ec)
 {
     clear_if(ec);
 
@@ -897,7 +897,7 @@ void FormatContext::resetSocketAccess()
     m_lastSocketAccess = std::chrono::system_clock::now();
 }
 
-void FormatContext::findStreamInfo(AVDictionary **options, size_t optionsCount, error_code &ec)
+void FormatContext::findStreamInfo(AVDictionary **options, size_t optionsCount, OptionalErrorCode ec)
 {
     clear_if(ec);
 
@@ -947,7 +947,7 @@ ssize_t FormatContext::checkPbError(ssize_t stat)
     return stat;
 }
 
-void FormatContext::openCustomIO(CustomIO *io, size_t internalBufferSize, bool isWritable, error_code &ec)
+void FormatContext::openCustomIO(CustomIO *io, size_t internalBufferSize, bool isWritable, OptionalErrorCode ec)
 {
     clear_if(ec);
 
@@ -990,7 +990,7 @@ void FormatContext::openCustomIO(CustomIO *io, size_t internalBufferSize, bool i
     m_raw->pb = ctx;
 }
 
-void FormatContext::openCustomIOInput(CustomIO *io, size_t internalBufferSize, error_code &ec)
+void FormatContext::openCustomIOInput(CustomIO *io, size_t internalBufferSize, OptionalErrorCode ec)
 {
     if (isOpened())
     {
@@ -1000,7 +1000,7 @@ void FormatContext::openCustomIOInput(CustomIO *io, size_t internalBufferSize, e
     openCustomIO(io, internalBufferSize, false, ec);
 }
 
-void FormatContext::openCustomIOOutput(CustomIO *io, size_t internalBufferSize, error_code &ec)
+void FormatContext::openCustomIOOutput(CustomIO *io, size_t internalBufferSize, OptionalErrorCode ec)
 {
     if (isOpened())
     {

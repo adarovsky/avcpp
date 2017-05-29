@@ -137,7 +137,7 @@ bool AudioResampler::pop(AudioSamples &dst, bool getall, OptionalErrorCode ec)
     }
 
     auto result = avresample_available(m_raw);
-    //clog << "  delay [pop]: " << result << endl;
+    clog << "  delay [pop]: " << result << endl;
 
     // Need more data
     if (result < dst.samplesCount() && getall == false)
@@ -163,8 +163,8 @@ bool AudioResampler::pop(AudioSamples &dst, bool getall, OptionalErrorCode ec)
     dst.setPts(m_nextPts);
     m_nextPts = dst.pts() + Timestamp{dst.samplesCount(), dst.timeBase()};
 
-    //result = avresample_available(m_raw);
-    //clog << "  delay [pop]: " << result << endl;
+    result = avresample_available(m_raw);
+    clog << "  delay [pop]: " << result << endl;
 
     // When no data, samples count sets to zero
     return dst.samplesCount() ? true : false;

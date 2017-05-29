@@ -374,8 +374,8 @@ void CodecContext2::setCodec(const Codec &codec, bool resetDefaults, Direction d
     }
     FF_ENABLE_DEPRECATION_WARNINGS
 #else
-    //if (m_stream.isValid())
-    //    avcodec_parameters_from_context(m_stream.raw()->codecpar, m_raw);
+    if (m_stream.isValid())
+        avcodec_parameters_from_context(m_stream.raw()->codecpar, m_raw);
 #endif
 }
 
@@ -660,7 +660,8 @@ void CodecContext2::setExtraData(const std::string& extraData)
 
     m_raw->extradata_size = extraData.size();
     if (m_raw->extradata_size > 0) {
-        m_raw->extradata = reinterpret_cast<uint8_t*>(av_malloc(m_raw->extradata_size));
+        m_raw->extradata = reinterpret_cast<uint8_t*>(av_malloc(m_raw->extradata_size + 32));
+        memset(m_raw->extradata, 0, m_raw->extradata_size + 32);
         std::copy(extraData.begin(), extraData.end(), m_raw->extradata);
     }
     else

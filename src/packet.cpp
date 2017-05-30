@@ -129,7 +129,7 @@ failed_alloc:
     return AVERROR(ENOMEM);
 }
 
-static static int copy_packet_data(AVPacket *pkt, const AVPacket *src, int dup)
+static int copy_packet_data(AVPacket *pkt, const AVPacket *src, int dup)
 {
     pkt->data      = NULL;
     pkt->side_data = NULL;

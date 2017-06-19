@@ -104,7 +104,7 @@ do {                                         \
         dst = (typeof(dst))data;                                           \
     } while (0)
 
-int av_copy_packet_side_data(AVPacket *pkt, const AVPacket *src)
+int av_copy_packet_side_data_2(AVPacket *pkt, const AVPacket *src)
 {
     if (src->side_data_elems) {
         int i;
@@ -148,7 +148,7 @@ static int copy_packet_data(AVPacket *pkt, const AVPacket *src, int dup)
         pkt->side_data_elems = src->side_data_elems;
     }
     if (src->side_data_elems && !dup) {
-        return av_copy_packet_side_data(pkt, src);
+        return av_copy_packet_side_data_2(pkt, src);
     }
     return 0;
 
@@ -157,7 +157,7 @@ failed_alloc:
     return AVERROR(ENOMEM);
 }
 
-int av_copy_packet(AVPacket *dst, const AVPacket *src)
+int av_copy_packet_2(AVPacket *dst, const AVPacket *src)
 {
     *dst = *src;
     return copy_packet_data(dst, src, 0);
@@ -181,7 +181,7 @@ void Packet::initFromAVPacket(const AVPacket *packet, bool deepCopy, OptionalErr
         tmp.buf = nullptr;
     }
 
-    int sts = av_copy_packet(&m_raw, &tmp);
+    int sts = av_copy_packet_2(&m_raw, &tmp);
     if (sts < 0) {
         throws_if(ec, sts, ffmpeg_category());
         return;
@@ -375,7 +375,7 @@ AVPacket Packet::makeRef(OptionalErrorCode ec) const
 {
     clear_if(ec);
     AVPacket pkt;
-    auto sts = av_copy_packet(&pkt, &m_raw);
+    auto sts = av_copy_packet_2(&pkt, &m_raw);
     if (sts < 0) {
         throws_if(ec, sts, ffmpeg_category());
     }

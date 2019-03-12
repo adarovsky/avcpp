@@ -7,6 +7,8 @@
 #include "pixelformat.h"
 #include "sampleformat.h"
 #include "avlog.h"
+#include "codec.h"
+#include "frame.h"
 
 extern "C" {
 #include <libavcodec/avcodec.h>

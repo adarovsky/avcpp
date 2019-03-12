@@ -35,6 +35,7 @@ public:
     Rational    frameRate()          const;
     Rational    timeBase()           const;
     Rational    sampleAspectRatio()  const;
+    Rational    averageFrameRate()   const;
     Timestamp   startTime()          const;
     Timestamp   duration()           const;
     Timestamp   currentDts()         const;
@@ -51,6 +52,7 @@ public:
     void setTimeBase(const Rational &timeBase);
     void setFrameRate(const Rational &frameRate);
     void setSampleAspectRatio(const Rational &aspectRatio);
+    void setAverageFrameRate(const Rational &frameRate);
 
     /**
      * Flags to the user to detect events happening on the stream.
@@ -66,9 +68,6 @@ private:
     std::weak_ptr<char> m_parentMonitor;
     Direction           m_direction = Direction::Invalid;
 };
-
-// Back compat alias
-using Stream2 attribute_deprecated2("Use `Stream` class (drop-in replacement)") = Stream;
 
 } // ::av
 

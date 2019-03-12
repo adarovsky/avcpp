@@ -10,6 +10,7 @@
 #include "timestamp.h"
 #include "pixelformat.h"
 #include "sampleformat.h"
+#include "avutils.h"
 
 extern "C" {
 #include <libavutil/imgutils.h>
@@ -18,6 +19,60 @@ extern "C" {
 
 namespace av
 {
+
+namespace frame {
+
+static inline int64_t get_best_effort_timestamp(const AVFrame* frame) {
+#if LIBAVUTIL_VERSION_MAJOR < 56 // < FFmpeg 4.0
+    return av_frame_get_best_effort_timestamp(frame);
+#else
+    return frame->best_effort_timestamp;
+#endif
+}
+
+static inline uint64_t get_channel_layout(const AVFrame* frame) {
+#if LIBAVUTIL_VERSION_MAJOR < 56 // < FFmpeg 4.0
+    return static_cast<uint64_t>(av_frame_get_channel_layout(frame));
+#else
+    return frame->channel_layout;
+#endif
+}
+
+static inline void set_channel_layout(AVFrame* frame, uint64_t layout) {
+#if LIBAVUTIL_VERSION_MAJOR < 56 // < FFmpeg 4.0
+    av_frame_set_channel_layout(frame, static_cast<int64_t>(layout));
+#else
+    frame->channel_layout = layout;
+#endif
+}
+
+
+static inline int get_channels(const AVFrame* frame) {
+#if LIBAVUTIL_VERSION_MAJOR < 56 // < FFmpeg 4.0
+    return av_frame_get_channels(frame);
+#else
+    return frame->channels;
+#endif
+}
+
+static inline int get_sample_rate(const AVFrame* frame) {
+#if LIBAVUTIL_VERSION_MAJOR < 56 // < FFmpeg 4.0
+    return av_frame_get_sample_rate(frame);
+#else
+    return frame->sample_rate;
+#endif
+}
+
+static inline void set_sample_rate(AVFrame* frame, int sampleRate) {
+#if LIBAVUTIL_VERSION_MAJOR < 56 // < FFmpeg 4.0
+    av_frame_set_sample_rate(frame, sampleRate);
+#else
+    frame->sample_rate = sampleRate;
+#endif
+}
+
+
+} // ::frame
 
 template<typename T>
 class Frame : public FFWrapperPtr<AVFrame>
@@ -84,7 +139,6 @@ public:
         FRAME_SWAP(m_timeBase);
         FRAME_SWAP(m_streamIndex);
         FRAME_SWAP(m_isComplete);
-        FRAME_SWAP(m_fakePts);
 #undef FRAME_SWAP
     }
 
@@ -92,7 +146,6 @@ public:
         m_timeBase    = other.m_timeBase;
         m_streamIndex = other.m_streamIndex;
         m_isComplete  = other.m_isComplete;
-        m_fakePts     = other.m_fakePts;
     }
 
     bool isReferenced() const {
@@ -131,10 +184,10 @@ public:
 
     Timestamp pts() const
     {
-        return {RAW_GET(pts, AV_NOPTS_VALUE), m_timeBase};
+        return {RAW_GET(pts, av::NoPts), m_timeBase};
     }
 
-    void setPts(int64_t pts, Rational ptsTimeBase) attribute_deprecated
+    attribute_deprecated void setPts(int64_t pts, Rational ptsTimeBase)
     {
         RAW_SET(pts, ptsTimeBase.rescale(pts, m_timeBase));
     }
@@ -153,29 +206,23 @@ public:
         if (!m_raw)
             return;
 
-        int64_t rescaledPts          = AV_NOPTS_VALUE;
-        int64_t rescaledFakePts      = AV_NOPTS_VALUE;
-        int64_t rescaledBestEffortTs = AV_NOPTS_VALUE;
+        int64_t rescaledPts          = NoPts;
+        int64_t rescaledBestEffortTs = NoPts;
 
         if (m_timeBase != Rational() && value != Rational()) {
-            if (m_raw->pts != AV_NOPTS_VALUE)
+            if (m_raw->pts != av::NoPts)
                 rescaledPts = m_timeBase.rescale(m_raw->pts, value);
 
-            if (m_raw->best_effort_timestamp != AV_NOPTS_VALUE)
+            if (m_raw->best_effort_timestamp != av::NoPts)
                 rescaledBestEffortTs = m_timeBase.rescale(m_raw->best_effort_timestamp, value);
-
-            if (m_fakePts != AV_NOPTS_VALUE)
-                rescaledFakePts = m_timeBase.rescale(m_fakePts, value);
         } else {
             rescaledPts          = m_raw->pts;
-            rescaledFakePts      = m_fakePts;
             rescaledBestEffortTs = m_raw->best_effort_timestamp;
         }
 
         if (m_timeBase != Rational()) {
             m_raw->pts                   = rescaledPts;
             m_raw->best_effort_timestamp = rescaledBestEffortTs;
-            m_fakePts                    = rescaledFakePts;
         }
 
         m_timeBase = value;
@@ -200,24 +247,26 @@ public:
     operator bool() const { return isValid() && isComplete(); }
 
     uint8_t *data(size_t plane = 0) {
-        if (!m_raw || plane >= AV_NUM_DATA_POINTERS)
+        if (!m_raw || plane >= (AV_NUM_DATA_POINTERS + m_raw->nb_extended_buf))
             return nullptr;
-        return m_raw->data[plane];
+        return m_raw->extended_data[plane];
     }
 
     const uint8_t *data(size_t plane = 0) const {
-        if (!m_raw || plane >= AV_NUM_DATA_POINTERS)
+        if (!m_raw || plane >= (AV_NUM_DATA_POINTERS + m_raw->nb_extended_buf))
             return nullptr;
-        return m_raw->data[plane];
+        return m_raw->extended_data[plane];;
     }
 
     size_t size(size_t plane) const {
-        if (!m_raw || plane >= AV_NUM_DATA_POINTERS)
+        if (!m_raw || plane >= (AV_NUM_DATA_POINTERS + m_raw->nb_extended_buf))
             return 0;
-        AVBufferRef *buf = m_raw->buf[plane];
+        AVBufferRef *buf = plane < AV_NUM_DATA_POINTERS ?
+                               m_raw->buf[plane] :
+                               m_raw->extended_buf[plane - AV_NUM_DATA_POINTERS];
         if (buf == nullptr)
             return 0;
-        return buf->size;
+        return size_t(buf->size);
     }
 
     size_t size() const {
@@ -228,19 +277,30 @@ public:
             for (size_t i = 0; i < AV_NUM_DATA_POINTERS && m_raw->buf[i]; i++) {
                 total += m_raw->buf[i]->size;
             }
+
+            for (size_t i = 0; i < m_raw->nb_extended_buf; ++i) {
+                total += m_raw->extended_buf[i]->size;
+            }
         } else if (m_raw->data[0]) {
-            uint8_t data[4] = {0};
-            int     linesizes[4] = {
-                m_raw->linesize[0],
-                m_raw->linesize[1],
-                m_raw->linesize[2],
-                m_raw->linesize[3],
-            };
-            total = av_image_fill_pointers(reinterpret_cast<uint8_t**>(&data),
-                                           static_cast<AVPixelFormat>(m_raw->format),
-                                           m_raw->height,
-                                           nullptr,
-                                           linesizes);
+            if (m_raw->width && m_raw->height) {
+                uint8_t data[4] = {0};
+                int     linesizes[4] = {
+                    m_raw->linesize[0],
+                    m_raw->linesize[1],
+                    m_raw->linesize[2],
+                    m_raw->linesize[3],
+                };
+                total = av_image_fill_pointers(reinterpret_cast<uint8_t**>(&data),
+                                               static_cast<AVPixelFormat>(m_raw->format),
+                                               m_raw->height,
+                                               nullptr,
+                                               linesizes);
+            } else if (m_raw->nb_samples && m_raw->channel_layout) {
+                for (size_t i = 0; i < m_raw->nb_extended_buf + AV_NUM_DATA_POINTERS && m_raw->extended_data[i]; ++i) {
+                    // According docs, all planes must have same size
+                    total += m_raw->linesize[0];
+                }
+            }
         }
         return total;
     }
@@ -261,7 +321,6 @@ protected:
     Rational             m_timeBase;
     int                  m_streamIndex {-1};
     bool                 m_isComplete  {false};
-    int64_t              m_fakePts     {AV_NOPTS_VALUE};
 };
 
 
@@ -292,10 +351,11 @@ public:
 
     AVPictureType          pictureType() const;
     void                   setPictureType(AVPictureType type = AV_PICTURE_TYPE_NONE);
+
+    Rational               sampleAspectRatio() const;
+    void                   setSampleAspectRatio(const Rational& sampleAspectRatio);
 };
 
-// Be a little back compat
-using VideoFrame2 attribute_deprecated2("Use `VideoFrame` class (drop-in replacement)") = VideoFrame;
 
 class AudioSamples : public Frame<AudioSamples>
 {
@@ -318,17 +378,15 @@ public:
     SampleFormat sampleFormat() const;
     int            samplesCount() const;
     int            channelsCount() const;
-    int64_t        channelsLayout() const;
+    uint64_t channelsLayout() const;
     int            sampleRate() const;
     size_t         sampleBitDepth(OptionalErrorCode ec = throws()) const;
+    bool           isPlanar() const;
 
     std::string    channelsLayoutString() const;
 
     static AudioSamples silence(SampleFormat sampleFormat, int samplesCount, uint64_t channelLayout, int sampleRate, int align = SampleFormat::AlignDefault);
 };
-
-// Be a little back compat
-using AudioSamples2 attribute_deprecated2("Use `AudioSamples` class (drop-in replacement)") = AudioSamples;
 
 
 } // ::av

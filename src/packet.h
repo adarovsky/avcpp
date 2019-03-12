@@ -26,7 +26,8 @@ private:
 
 public:
     Packet();
-    Packet(const Packet &packet, OptionalErrorCode ec = throws());
+    Packet(const Packet &packet, OptionalErrorCode ec);
+    Packet(const Packet &packet);
     Packet(Packet &&packet);
     explicit Packet(const AVPacket *packet, OptionalErrorCode ec = throws());
     explicit Packet(const std::vector<uint8_t> &data);
@@ -45,16 +46,14 @@ public:
     size_t size() const;
 
     /**
-     * Set packet PTS field. It also set fake pts value, so, if you need fake value, you should
-     * store it before and restore later. It useful for audio samples: PTS and DTS values in
-     * encoded packets in any cases have AV_NOPTS_VALUE!
+     * Set packet PTS field.
      *
      * @param pts new presentation timestamp value
      * @param tsTimeBase  is a time base of setted timestamp, can be omited or sets to Rational(0,0)
      *                    that means that time base equal to packet time base.
      */
-    void setPts(int64_t pts,     const Rational &tsTimeBase = Rational(0, 0)) attribute_deprecated;
-    void setDts(int64_t dts,     const Rational &tsTimeBase = Rational(0, 0)) attribute_deprecated;
+    attribute_deprecated void setPts(int64_t pts,     const Rational &tsTimeBase = Rational(0, 0));
+    attribute_deprecated void setDts(int64_t dts,     const Rational &tsTimeBase = Rational(0, 0));
 
     void setPts(const Timestamp &pts);
     void setDts(const Timestamp &dts);
@@ -103,7 +102,6 @@ private:
 private:
     bool     m_completeFlag;
     Rational m_timeBase;
-    //int64_t  m_fakePts;
 };
 
 

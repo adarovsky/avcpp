@@ -1,4 +1,5 @@
 #include "packet.h"
+#include "avutils.h"
 
 using namespace std;
 
@@ -9,19 +10,22 @@ Packet::Packet()
     initCommon();
 }
 
+Packet::Packet(const Packet &packet)
+    : Packet(packet, throws())
+{
+}
+
 Packet::Packet(const Packet &packet, OptionalErrorCode ec)
     : Packet()
 {
     initFromAVPacket(&packet.m_raw, false, ec);
     m_completeFlag = packet.m_completeFlag;
     m_timeBase = packet.m_timeBase;
-    //m_fakePts = packet.m_fakePts;
 }
 
 Packet::Packet(Packet &&packet)
     : m_completeFlag(packet.m_completeFlag),
       m_timeBase(packet.m_timeBase)
-      //m_fakePts(packet.m_fakePts)
 {
     // copy packet as is
     m_raw = packet.m_raw;
@@ -45,8 +49,8 @@ Packet::Packet(const uint8_t *data, size_t size, bool doAllign)
     m_raw.size = size;
     if (doAllign)
     {
-        m_raw.data = reinterpret_cast<uint8_t*>(av_malloc(size + FF_INPUT_BUFFER_PADDING_SIZE));
-        std::fill_n(m_raw.data + m_raw.size, FF_INPUT_BUFFER_PADDING_SIZE, '\0');
+        m_raw.data = reinterpret_cast<uint8_t*>(av_malloc(size + AV_INPUT_BUFFER_PADDING_SIZE));
+        std::fill_n(m_raw.data + m_raw.size, AV_INPUT_BUFFER_PADDING_SIZE, '\0');
     }
     else
         m_raw.data = reinterpret_cast<uint8_t*>(av_malloc(size));
@@ -71,9 +75,9 @@ void Packet::initCommon()
 
     m_completeFlag = false;
     m_timeBase     = Rational(0, 0);
-    //m_fakePts      = AV_NOPTS_VALUE;
 }
 
+FF_DISABLE_DEPRECATION_WARNINGS
 void Packet::initFromAVPacket(const AVPacket *packet, bool deepCopy, OptionalErrorCode ec)
 {
     clear_if(ec);
@@ -98,9 +102,9 @@ void Packet::initFromAVPacket(const AVPacket *packet, bool deepCopy, OptionalErr
         return;
     }
 
-    //m_fakePts      = packet->pts;
     m_completeFlag = m_raw.size > 0;
 }
+FF_ENABLE_DEPRECATION_WARNINGS
 
 bool Packet::setData(const vector<uint8_t> &newData, OptionalErrorCode ec)
 {
@@ -116,10 +120,10 @@ bool Packet::setData(const uint8_t *newData, size_t size, OptionalErrorCode ec)
             av_buffer_unref(&m_raw.buf);
         else
             av_freep(&m_raw.data);
-        m_raw.data = reinterpret_cast<uint8_t*>(av_malloc(size + FF_INPUT_BUFFER_PADDING_SIZE));
+        m_raw.data = reinterpret_cast<uint8_t*>(av_malloc(size + AV_INPUT_BUFFER_PADDING_SIZE));
         m_raw.size = size;
 
-        std::fill_n(m_raw.data + m_raw.size, FF_INPUT_BUFFER_PADDING_SIZE, '\0'); // set padding memory to zero
+        std::fill_n(m_raw.data + m_raw.size, AV_INPUT_BUFFER_PADDING_SIZE, '\0'); // set padding memory to zero
         m_raw.buf = av_buffer_create(m_raw.data, m_raw.size, av_buffer_default_free, nullptr, 0);
         if (!m_raw.buf) {
             throws_if(ec, ENOMEM, system_category());
@@ -146,7 +150,7 @@ Timestamp Packet::dts() const
 
 Timestamp Packet::ts() const
 {
-    return {m_raw.pts != AV_NOPTS_VALUE ? m_raw.pts : m_raw.dts, m_timeBase};
+    return {m_raw.pts != av::NoPts ? m_raw.pts : m_raw.dts, m_timeBase};
 }
 
 size_t Packet::size() const
@@ -160,7 +164,6 @@ void Packet::setPts(int64_t pts, const Rational &tsTimeBase)
         m_raw.pts = pts;
     else
         m_raw.pts = tsTimeBase.rescale(pts, m_timeBase);
-//    setFakePts(pts, tsTimeBase);
 }
 
 void Packet::setDts(int64_t dts, const Rational &tsTimeBase)
@@ -170,14 +173,6 @@ void Packet::setDts(int64_t dts, const Rational &tsTimeBase)
     else
         m_raw.dts = tsTimeBase.rescale(dts, m_timeBase);
 }
-
-//void Packet::setFakePts(int64_t pts, const Rational &tsTimeBase)
-//{
-//    if (tsTimeBase == Rational(0, 0))
-//        m_fakePts = pts;
-//    else
-//        m_fakePts = tsTimeBase.rescale(pts, m_timeBase);
-//}
 
 void Packet::setPts(const Timestamp &pts)
 {
@@ -282,6 +277,7 @@ int Packet::refCount() const
         return 0;
 }
 
+FF_DISABLE_DEPRECATION_WARNINGS
 AVPacket Packet::makeRef(OptionalErrorCode ec) const
 {
     clear_if(ec);
@@ -292,6 +288,7 @@ AVPacket Packet::makeRef(OptionalErrorCode ec) const
     }
     return pkt;
 }
+FF_ENABLE_DEPRECATION_WARNINGS
 
 Packet Packet::clone(OptionalErrorCode ec) const
 {

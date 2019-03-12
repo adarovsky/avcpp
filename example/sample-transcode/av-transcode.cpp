@@ -40,7 +40,7 @@ void formatWriter(const ContainerPtr& container, const PacketPtr& packet)
 {
     packetSync.doTimeSync(packet);
 
-    //if (packet->getPts() != AV_NOPTS_VALUE)
+    //if (packet->getPts() != av::NoPts)
     //    packet->setDts(packet->getPts());
 
     clog << "Write FRAME: " << packet->getStreamIndex()
@@ -48,7 +48,6 @@ void formatWriter(const ContainerPtr& container, const PacketPtr& packet)
          << ", DTS: "       << packet->getDts()
          << ", timeBase: "  << packet->getTimeBase()
          << ", time: "      << packet->getTimeBase().getDouble() * packet->getPts()
-         << ", fakeTime: "  << packet->getTimeBase().getDouble() * packet->getFakePts()
          << endl;
 
     container->writePacket(packet, true);
@@ -401,7 +400,7 @@ int main(int argc, char **argv)
             VideoFramePtr  frame(new VideoFrame());
             StreamCoderPtr coder = decoders[pkt->getStreamIndex()];
 
-            if (pkt->getPts() == AV_NOPTS_VALUE && pkt->getDts() != AV_NOPTS_VALUE)
+            if (pkt->getPts() == av::NoPts && pkt->getDts() != av::NoPts)
             {
                 pkt->setPts(pkt->getDts());
             }
@@ -472,15 +471,14 @@ int main(int argc, char **argv)
             AudioSamplesPtr samples(new AudioSamples());
             StreamCoderPtr  coder = decoders[pkt->getStreamIndex()];
 
-            pkt->setPts(AV_NOPTS_VALUE);
-            pkt->setDts(AV_NOPTS_VALUE);
+            pkt->setPts(av::NoPts);
+            pkt->setDts(av::NoPts);
 
             int size = coder->decodeAudio(samples, pkt);
             samples->setStreamIndex(streamMapping[pkt->getStreamIndex()]);
 
             //clog << "Packet Size: " << pkt->getSize() << ", encoded bytes: " << size << endl;
             //clog << "Audio Inp PTS: " << pkt->getPts() << ", " << samples->getPts() << endl;
-            //clog << "FakePts: " << samples->getFakePts() << ", timeBase: " << samples->getTimeBase() << ", " << samples->getTimeBase().getDouble() * samples->getFakePts() << endl;
 
             if (samples->isComplete())
             {
@@ -523,7 +521,6 @@ int main(int argc, char **argv)
                             AudioSamplesPtr outSamples = std::static_pointer_cast<AudioSamples>(outFrame);
 
                             outSamples->setTimeBase(encoder->getTimeBase());
-                            outSamples->setFakePts(pkt->getTimeBase().rescale(pkt->getPts(), outSamples->getTimeBase()));
                             outSamples->setStreamIndex(streamMapping[pkt->getStreamIndex()]);
 
 //                            clog << "Samples: " << outSamples->getSamplesCount()
@@ -540,7 +537,6 @@ int main(int argc, char **argv)
                 AudioSamplesPtr outSamples = std::static_pointer_cast<AudioSamples>(outFrame);
 
                 outSamples->setTimeBase(encoder->getTimeBase());
-                outSamples->setFakePts(pkt->getTimeBase().rescale(pkt->getPts(), outSamples->getTimeBase()));
                 outSamples->setStreamIndex(streamMapping[pkt->getStreamIndex()]);
 
                 stat = encoder->encodeAudio(outSamples, std::bind(formatWriter, writer, std::placeholders::_1));

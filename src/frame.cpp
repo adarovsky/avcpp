@@ -176,6 +176,16 @@ void VideoFrame::setPictureType(AVPictureType type)
     RAW_SET(pict_type, type);
 }
 
+Rational VideoFrame::sampleAspectRatio() const
+{
+    return RAW_GET(sample_aspect_ratio, AVRational());
+}
+
+void VideoFrame::setSampleAspectRatio(const Rational& sampleAspectRatio)
+{
+    RAW_SET(sample_aspect_ratio, sampleAspectRatio);
+}
+
 
 AudioSamples::AudioSamples(SampleFormat sampleFormat, int samplesCount, uint64_t channelLayout, int sampleRate, int align)
 {
@@ -196,8 +206,8 @@ int AudioSamples::init(SampleFormat sampleFormat, int samplesCount, uint64_t cha
     m_raw->format      = sampleFormat;
     m_raw->nb_samples  = samplesCount;
 
-    av_frame_set_sample_rate(m_raw, sampleRate);
-    av_frame_set_channel_layout(m_raw, channelLayout);
+    av::frame::set_sample_rate(m_raw, sampleRate);
+    av::frame::set_channel_layout(m_raw, channelLayout);
 
     av_frame_get_buffer(m_raw, align);
     return 0;
@@ -254,17 +264,17 @@ int AudioSamples::samplesCount() const
 
 int AudioSamples::channelsCount() const
 {
-    return m_raw ? av_frame_get_channels(m_raw) : 0;
+    return m_raw ? av::frame::get_channels(m_raw) : 0;
 }
 
-int64_t AudioSamples::channelsLayout() const
+uint64_t AudioSamples::channelsLayout() const
 {
-    return m_raw ? av_frame_get_channel_layout(m_raw) : 0;
+    return m_raw ? av::frame::get_channel_layout(m_raw) : 0;
 }
 
 int AudioSamples::sampleRate() const
 {
-    return m_raw ? av_frame_get_sample_rate(m_raw) : 0;
+    return m_raw ? av::frame::get_sample_rate(m_raw) : 0;
 }
 
 size_t AudioSamples::sampleBitDepth(OptionalErrorCode ec) const
@@ -274,6 +284,11 @@ size_t AudioSamples::sampleBitDepth(OptionalErrorCode ec) const
             : 0;
 }
 
+bool AudioSamples::isPlanar() const
+{
+    return m_raw ? av_sample_fmt_is_planar(static_cast<AVSampleFormat>(m_raw->format)) : false;
+}
+
 string AudioSamples::channelsLayoutString() const
 {
     if (!m_raw)
@@ -281,8 +296,8 @@ string AudioSamples::channelsLayoutString() const
     char buf[128] = {0};
     av_get_channel_layout_string(buf,
                                  sizeof(buf),
-                                 av_frame_get_channels(m_raw),
-                                 av_frame_get_channel_layout(m_raw));
+                                 av::frame::get_channels(m_raw),
+                                 av::frame::get_channel_layout(m_raw));
     return string(buf);
 }
 

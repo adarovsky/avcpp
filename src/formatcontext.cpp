@@ -2,6 +2,7 @@
 
 #include "avutils.h"
 #include "avtime.h"
+#include "frame.h"
 #include "avlog.h"
 
 #include "formatcontext.h"
@@ -205,11 +206,6 @@ Stream FormatContext::addStream(const Codec &codec, OptionalErrorCode ec)
         return Stream();
     }
 
-    if (!outputFormat().codecSupported(codec)) {
-        throws_if(ec, Errors::FormatCodecUnsupported);
-        return Stream();
-    }
-
     auto rawcodec = codec.raw();
     AVStream *st = nullptr;
 
@@ -321,11 +317,11 @@ Timestamp FormatContext::duration() const noexcept
 
     // Taken from the av_dump_format()
     int64_t duration = m_raw->duration;
-    if (m_raw->duration != AV_NOPTS_VALUE) {
+    if (m_raw->duration != av::NoPts) {
         duration += (m_raw->duration <= INT64_MAX - 5000 ? 5000 : 0);
     }
 
-    return {duration, AV_TIME_BASE_Q};
+    return {duration, av::TimeBaseQ};
 };
 
 void FormatContext::openInput(const string &uri, OptionalErrorCode ec)
@@ -474,11 +470,11 @@ Packet FormatContext::readPacket(OptionalErrorCode ec)
 
     // End of file
     if (sts == AVERROR_EOF /*|| avio_feof(m_raw->pb)*/) {
-        auto ec = std::error_code(sts, ffmpeg_category());
+        auto ec_tmp = std::error_code(sts, ffmpeg_category());
         fflog(AV_LOG_DEBUG,
               "EOF reaches, error=%d, %s, isNull: %d, stream_index: %d, payload: %p\n",
               sts,
-              ec.message().c_str(),
+              ec_tmp.message().c_str(),
               packet.isNull(),
               packet.streamIndex(),
               packet.data());

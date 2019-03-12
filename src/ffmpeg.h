@@ -18,7 +18,9 @@ extern "C"
 
 extern "C" {
 #include <libavfilter/avfilter.h>
-#include <libavfilter/avfiltergraph.h>
+#if LIBAVFILTER_VERSION_INT < AV_VERSION_INT(7,0,0)
+#  include <libavfilter/avfiltergraph.h>
+#endif
 #include <libavfilter/buffersink.h>
 #include <libavfilter/buffersrc.h>
 #if LIBAVFILTER_VERSION_INT <= AV_VERSION_INT(2,77,100) // 0.11.1
@@ -135,7 +137,8 @@ protected:
 template<typename WrapperClass, typename T, T NoneValue = static_cast<T>(-1)>
 struct PixSampleFmtWrapper
 {
-    PixSampleFmtWrapper(T fmt = NoneValue) noexcept : m_fmt(fmt) {}
+    PixSampleFmtWrapper() = default;
+    PixSampleFmtWrapper(T fmt) noexcept : m_fmt(fmt) {}
 
     // Access to  the stored value
     operator T() const noexcept

@@ -6,6 +6,8 @@
 
 #include "av.h"
 #include "avutils.h"
+#include "packet.h"
+#include "frame.h"
 
 using namespace std;
 
@@ -89,6 +91,7 @@ void dumpBinaryBuffer(uint8_t *buffer, int buffer_size, int width)
     }
 }
 
+#if LIBAVCODEC_VERSION_MAJOR < 58 // FFmpeg 4.0
 #if !defined(__MINGW32__) || defined(_GLIBCXX_HAS_GTHREADS)
 static int avcpp_lockmgr_cb(void **ctx, enum AVLockOp op)
 {
@@ -160,17 +163,26 @@ static int avcpp_lockmgr_cb(void **ctx, enum AVLockOp op)
 #else
 #  error "Unknown Threading model"
 #endif
-
+#endif
 
 void init()
 {
+#if LIBAVFORMAT_VERSION_MAJOR < 58 // FFmpeg 4.0
     av_register_all();
+#endif
     avformat_network_init();
+#if LIBAVCODEC_VERSION_MAJOR < 58 // FFmpeg 4.0
     avcodec_register_all();
+#endif
+#if LIBAVFILTER_VERSION_MAJOR < 7 // FFmpeg 4.0
     avfilter_register_all();
+#endif
     avdevice_register_all();
 
+#if LIBAVCODEC_VERSION_MAJOR < 58 // FFmpeg 4.0
     av_lockmgr_register(avcpp_lockmgr_cb);
+#endif
+
     set_logging_level(AV_LOG_ERROR);
 
     // Ignore sigpipe by default
@@ -185,6 +197,63 @@ string error2string(int error)
     char errorBuf[AV_ERROR_MAX_STRING_SIZE] = {0};
     av_strerror(error, errorBuf, AV_ERROR_MAX_STRING_SIZE);
     return string(errorBuf);
+}
+
+bool AvDeleter::operator()(SwsContext *&swsContext)
+{
+    sws_freeContext(swsContext);
+    swsContext = nullptr;
+    return true;
+}
+
+bool AvDeleter::operator()(AVCodecContext *&codecContext)
+{
+    avcodec_close(codecContext);
+    av_free(codecContext);
+    codecContext = nullptr;
+    return true;
+}
+
+bool AvDeleter::operator()(AVOutputFormat *&format)
+{
+    // Only set format to zero, it can'be freed by user
+    format = 0;
+    return true;
+}
+
+bool AvDeleter::operator()(AVFormatContext *&formatContext)
+{
+    avformat_free_context(formatContext);
+    formatContext = nullptr;
+    return true;
+}
+
+bool AvDeleter::operator()(AVFrame *&frame)
+{
+    av_freep(&frame);
+    frame = nullptr;
+    return true;
+}
+
+bool AvDeleter::operator()(AVPacket *&packet)
+{
+    avpacket_unref(packet);
+    av_free(packet);
+    packet = nullptr;
+    return true;
+}
+
+bool AvDeleter::operator()(AVDictionary *&dictionary)
+{
+    av_dict_free(&dictionary);
+    dictionary = nullptr;
+    return true;
+}
+
+bool AvDeleter::operator ()(AVFilterInOut *&filterInOut)
+{
+    avfilter_inout_free(&filterInOut);
+    return true;
 }
 
 

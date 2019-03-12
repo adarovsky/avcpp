@@ -2,9 +2,6 @@
 
 #include "ffmpeg.h"
 #include "stream.h"
-#include "frame.h"
-#include "codec.h"
-#include "dictionary.h"
 #include "avutils.h"
 #include "averror.h"
 #include "pixelformat.h"
@@ -15,8 +12,6 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/version.h>
 }
-
-#include "codeccontext_deprecated.h"
 
 namespace av {
 
@@ -35,17 +30,17 @@ protected:
     CodecContext2();
 
     // Stream decoding/encoding
-    CodecContext2(const Stream &st,
-                     const Codec& codec,
-                     Direction direction,
-                     AVMediaType type);
+    CodecContext2(const class Stream &st,
+                  const class Codec& codec,
+                  Direction direction,
+                  AVMediaType type);
 
     // Stream independ decoding/encoding
-    CodecContext2(const Codec &codec, Direction direction, AVMediaType type);
+    CodecContext2(const class Codec &codec, Direction direction, AVMediaType type);
 
     ~CodecContext2();
 
-    void setCodec(const Codec &codec, bool resetDefaults, Direction direction, AVMediaType type, OptionalErrorCode ec = throws());
+    void setCodec(const class Codec &codec, bool resetDefaults, Direction direction, AVMediaType type, OptionalErrorCode ec = throws());
 
     AVMediaType codecType(AVMediaType contextType) const noexcept;
 
@@ -59,10 +54,10 @@ public:
 
     void open(OptionalErrorCode ec = throws());
     void open(const Codec &codec, OptionalErrorCode ec = throws());
-    void open(Dictionary &options, OptionalErrorCode ec = throws());
-    void open(Dictionary &&options, OptionalErrorCode ec = throws());
-    void open(Dictionary &options, const Codec &codec, OptionalErrorCode ec = throws());
-    void open(Dictionary &&options, const Codec &codec, OptionalErrorCode ec = throws());
+    void open(class Dictionary &options, OptionalErrorCode ec = throws());
+    void open(class Dictionary &&options, OptionalErrorCode ec = throws());
+    void open(class Dictionary &options, const Codec &codec, OptionalErrorCode ec = throws());
+    void open(class Dictionary &&options, const Codec &codec, OptionalErrorCode ec = throws());
 
     void close(OptionalErrorCode ec = throws());
 
@@ -99,10 +94,10 @@ public:
     int strict() const noexcept;
     void setStrict(int strict) noexcept;
 
-    int32_t bitRate() const noexcept;
-    std::pair<int, int> bitRateRange() const noexcept;
-    void setBitRate(int32_t bitRate) noexcept;
-    void setBitRateRange(const std::pair<int, int> &bitRateRange) noexcept;
+    int64_t bitRate() const noexcept;
+    std::pair<int64_t, int64_t> bitRateRange() const noexcept;
+    void setBitRate(int64_t bitRate) noexcept;
+    void setBitRateRange(const std::pair<int64_t, int64_t> &bitRateRange) noexcept;
 
     // Flags
     /// Access to CODEC_FLAG_* flags
@@ -137,101 +132,28 @@ protected:
 
 
     std::pair<ssize_t, const std::error_category*>
-    decodeCommon(AVFrame *outFrame, const Packet &inPacket, size_t offset, int &frameFinished,
+    decodeCommon(AVFrame *outFrame, const class Packet &inPacket, size_t offset, int &frameFinished,
                  int (*decodeProc)(AVCodecContext*, AVFrame*,int *, const AVPacket *)) noexcept;
 
     std::pair<ssize_t, const std::error_category*>
-    encodeCommon(Packet &outPacket, const AVFrame *inFrame, int &gotPacket,
+    encodeCommon(class Packet &outPacket, const AVFrame *inFrame, int &gotPacket,
                          int (*encodeProc)(AVCodecContext*, AVPacket*,const AVFrame*, int*)) noexcept;
 
 public:
     template<typename T>
     std::pair<ssize_t, const std::error_category*>
     decodeCommon(T &outFrame,
-                 const Packet &inPacket,
+                 const class Packet &inPacket,
                  size_t offset,
                  int &frameFinished,
-                 int (*decodeProc)(AVCodecContext *, AVFrame *, int *, const AVPacket *))
-    {
-        auto st = decodeCommon(outFrame.raw(), inPacket, offset, frameFinished, decodeProc);
-        if (std::get<1>(st))
-            return st;
-
-        if (!frameFinished)
-            return std::make_pair(0u, nullptr);
-
-        // Dial with PTS/DTS in packet/stream timebase
-
-        if (inPacket.timeBase() != Rational())
-            outFrame.setTimeBase(inPacket.timeBase());
-        else
-            outFrame.setTimeBase(m_stream.timeBase());
-
-        AVFrame *frame = outFrame.raw();
-
-        if (frame->pts == AV_NOPTS_VALUE)
-            frame->pts = av_frame_get_best_effort_timestamp(frame);
-
-        // Or: AVCODEC < 57.24.0 if this macro will be removes in future
-#if !defined(FF_API_PKT_PTS)
-        if (frame->pts == AV_NOPTS_VALUE)
-            frame->pts = frame->pkt_pts;
-#endif
-
-        if (frame->pts == AV_NOPTS_VALUE)
-            frame->pts = frame->pkt_dts;
-
-        // Convert to decoder/frame time base. Seems not nessesary.
-        outFrame.setTimeBase(timeBase());
-
-        if (inPacket)
-            outFrame.setStreamIndex(inPacket.streamIndex());
-        else
-            outFrame.setStreamIndex(m_stream.index());
-
-        outFrame.setComplete(true);
-
-        return st;
-    }
+                 int (*decodeProc)(AVCodecContext *, AVFrame *, int *, const AVPacket *));
 
     template<typename T>
     std::pair<ssize_t, const std::error_category*>
-    encodeCommon(Packet &outPacket,
+    encodeCommon(class Packet &outPacket,
                  const T &inFrame,
                  int &gotPacket,
-                 int (*encodeProc)(AVCodecContext *, AVPacket *, const AVFrame *, int *))
-    {
-        auto st = encodeCommon(outPacket, inFrame.raw(), gotPacket, encodeProc);
-        if (std::get<1>(st))
-            return st;
-        if (!gotPacket)
-            return std::make_pair(0u, nullptr);
-
-        if (inFrame && inFrame.timeBase() != Rational()) {
-            outPacket.setTimeBase(inFrame.timeBase());
-            outPacket.setStreamIndex(inFrame.streamIndex());
-        } else if (m_stream.isValid()) {
-#if USE_CODECPAR
-            outPacket.setTimeBase(av_stream_get_codec_timebase(m_stream.raw()));
-#else
-            FF_DISABLE_DEPRECATION_WARNINGS
-            if (m_stream.raw()->codec) {
-                outPacket.setTimeBase(m_stream.raw()->codec->time_base);
-            }
-            FF_ENABLE_DEPRECATION_WARNINGS
-#endif
-            outPacket.setStreamIndex(m_stream.index());
-        }
-
-        // Recalc PTS/DTS/Duration
-        if (m_stream.isValid()) {
-            outPacket.setTimeBase(m_stream.timeBase());
-        }
-
-        outPacket.setComplete(true);
-
-        return st;
-    }
+                 int (*encodeProc)(AVCodecContext *, AVPacket *, const AVFrame *, int *));
 
 private:
     Stream m_stream;
@@ -253,29 +175,13 @@ protected:
 public:
     GenericCodecContext() = default;
 
-    GenericCodecContext(Stream st)
-        : CodecContext2(st, Codec(), st.direction(), st.mediaType())
-    {
-    }
+    GenericCodecContext(Stream st);
 
-    GenericCodecContext(GenericCodecContext&& other)
-        : GenericCodecContext()
-    {
-        swap(other);
-    }
+    GenericCodecContext(GenericCodecContext&& other);
 
-    GenericCodecContext& operator=(GenericCodecContext&& rhs)
-    {
-        if (this == &rhs)
-            return *this;
-        GenericCodecContext(std::move(rhs)).swap(*this);
-        return *this;
-    }
+    GenericCodecContext& operator=(GenericCodecContext&& rhs);
 
-    AVMediaType codecType() const noexcept
-    {
-        return codecType(stream().mediaType());
-    }
+    AVMediaType codecType() const noexcept;
 };
 
 
@@ -303,7 +209,7 @@ public:
     }
 
     // Stream decoding/encoding
-    explicit CodecContextBase(const Stream &st, const Codec& codec = Codec())
+    explicit CodecContextBase(const class Stream &st, const class Codec& codec = Codec())
         : CodecContext2(st, codec, _direction, _type)
     {
     }
@@ -398,6 +304,11 @@ public:
         return RAW_GET2(isValid(), max_b_frames, 0);
     }
 
+    Rational sampleAspectRatio() const
+    {
+        return RAW_GET(sample_aspect_ratio, AVRational());
+    }
+
     void setWidth(int w) // Note, it also sets coded_width
     {
         if (isValid() & !isOpened())
@@ -452,6 +363,11 @@ public:
     void setMaxBFrames(int maxBFrames)
     {
         RAW_SET2(isValid(), max_b_frames, maxBFrames);
+    }
+
+    void setSampleAspectRatio(const Rational& sampleAspectRatio)
+    {
+        RAW_SET(sample_aspect_ratio, sampleAspectRatio);
     }
 
 protected:

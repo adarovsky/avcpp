@@ -1,5 +1,4 @@
-AvCpp
-=====
+# AvCpp [![Build Status](https://travis-ci.org/h4tr3d/avcpp.svg?branch=master)](https://travis-ci.org/h4tr3d/avcpp) [![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/h4tr3d/avcpp.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/h4tr3d/avcpp/context:cpp)
 
 Wrapper for the FFmpeg that simplify usage it from C++ projects.
 
@@ -15,7 +14,7 @@ Currently covered next functionality:
 Requirements
 ------------
 
-  - FFmpeg >= 1.0 (LibAV not supported)
+  - FFmpeg >= 2.0
     - libavformat >= 54.x.x
     - libavcodec >= 54.x.x
     - libavfilter >= 3.x.x
@@ -23,14 +22,19 @@ Requirements
     - libswscale >= 2.x.x
     - libswresample >= 0.x.x
     - libpostproc >= 52.x.x
-  - GCC >= 4.8 (C++11 is required)
-  
+  - GCC >= 5.0 (C++11 is required)
 
 ### Debian
 
 You should install FFmpeg packages from the deb-multimedia.org site:
 ```
-sudo apt-get install libavformat-dev libavcodec-dev libavutil-dev libavfilter-dev libswscale-dev libswresample-dev libpostproc-dev
+sudo apt-get install libavformat-dev \
+                     libavcodec-dev \
+                     libavutil-dev \
+                     libavfilter-dev \
+                     libswscale-dev \
+                     libswresample-dev \
+                     libpostproc-dev
 ```
 
 Note 1: I did not test building on Debian.
@@ -40,18 +44,64 @@ Note 2: Debian Wheezy repo contains only FFmpeg 1.0.8. I tested building only wi
 
 ### Ubuntu and Linux Mint
 
-You should add [ffmpeg-opti](https://launchpad.net/~adrozdoff/+archive/ubuntu/ffmpeg-opti) PPA:
+You should add [ffmpeg-3](https://launchpad.net/~jonathonf/+archive/ubuntu/ffmpeg-3) PPA:
 ```
-sudo add-apt-repository ppa:adrozdoff/ffmpeg-opti
-sudo apt-get update
-sudo apt-get install libavformat-ffmpeg-dev libavcodec-ffmpeg-dev libavutil-ffmpeg-dev libavfilter-ffmpeg-dev libswscale-ffmpeg-dev libswresample-ffmpeg-dev libpostproc-ffmpeg-dev
+sudo add-apt-repository ppa:jonathonf/ffmpeg-3 -y
+sudo add-apt-repository ppa:jonathonf/tesseract -y
+sudo apt update && sudo apt upgrade
+sudo apt install libavcodec-dev \
+                 libavdevice-dev \
+                 libavfilter-dev \
+                 libavformat-dev \
+                 libavresample-dev \
+                 libavutil-dev \
+                 libpostproc-dev \
+                 libswresample-dev \
+                 libswscale-dev
 ```
+
+Build
+-----
+
+```
+git clone https://github.com/h4tr3d/avcpp.git avcpp-git
+cd avcpp-git
+mkdir build
+cd build
+cmake ..
+make -j8
+```
+
+If FFmpeg located in non-standard place:
+```
+cmake -DPC_FFMPEG_LIBRARY_DIRS=<some_path> -DPC_FFMPEG_INCLUDE_DIRS=<some_path> ..
+```
+
+To point install prefix:
+```
+cmake -DCMAKE_INSTALL_PREFIX=/usr ..
+```
+
+Install:
+```
+sudo make install
+```
+or (for packaging)
+```
+sudo make DESTDIR=<some_prefix> install
+```
+
+Refer to CMake documentation for more details that can cover some special cases.
 
 Near future plans
 -----------------
 
   - ~~Building for Android (ready to commint but small code clean up is required)~~
-
+  - CI with complex build matrix:
+    - FFmpeg 3.x and FFmpeg 2.8
+    - GCC 5 and 7, MSVS 2015 and 2017, clang
+    - Linux, OSX, Windows
+    - Tests
 
 Future plans (long and not)
 ---------------------------

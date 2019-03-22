@@ -13,7 +13,7 @@
 
 namespace av {
 
-class FilterGraph : FFWrapperPtr<AVFilterGraph>
+class FilterGraph : public FFWrapperPtr<AVFilterGraph>
 {
     friend class FilterInOut;
 

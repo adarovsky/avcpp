@@ -25,6 +25,6 @@ find_package(FFmpeg
 add_subdirectory(src)
 #add_subdirectory(example/test-basic)
 #add_subdirectory(example/sample-transcode)
-add_subdirectory(example/api2-samples)
+#add_subdirectory(example/api2-samples)
 #add_subdirectory(example/sample-view)
 

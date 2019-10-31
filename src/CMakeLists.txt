@@ -5,15 +5,15 @@ file(GLOB_RECURSE AV_HEADERS "*.h" "*.hpp")
 
 set(AV_TARGET avcpp)
 
-add_library(${AV_TARGET}        SHARED ${AV_SOURCES})
+#add_library(${AV_TARGET}        SHARED ${AV_SOURCES})
 add_library(${AV_TARGET}_static STATIC ${AV_SOURCES})
 
 set_target_properties(${AV_TARGET}_static PROPERTIES OUTPUT_NAME ${AV_TARGET})
 
-target_link_libraries(${AV_TARGET}
-    Threads::Threads
-    FFmpeg::FFmpeg
-)
+#target_link_libraries(${AV_TARGET}
+#    Threads::Threads
+#    FFmpeg::FFmpeg
+#)
 
 target_link_libraries(${AV_TARGET}_static
     Threads::Threads
@@ -25,7 +25,7 @@ set(PLATFORM_LIBS
     ${FFMPEG_LIBRARIES})
 
 if(WIN32)
-  target_link_libraries(${AV_TARGET} ws2_32)
+#  target_link_libraries(${AV_TARGET} ws2_32)
   target_link_libraries(${AV_TARGET}_static ws2_32)
   list(APPEND PLATFORM_LIBS ws2_32)
 endif()
@@ -36,7 +36,7 @@ set(LIB_INSTALL_DIR lib     CACHE STRING "Install location of libraries")
 set(BIN_INSTALL_DIR bin     CACHE STRING "Install location of executables")
 set(INC_INSTALL_DIR include CACHE STRING "Intall location of headers")
 
-install(TARGETS ${AV_TARGET} ${AV_TARGET}_static
+install(TARGETS ${AV_TARGET}_static
         LIBRARY DESTINATION ${LIB_INSTALL_DIR}
         ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
         RUNTIME DESTINATION ${BIN_INSTALL_DIR})

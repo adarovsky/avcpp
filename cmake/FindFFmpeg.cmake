@@ -73,10 +73,10 @@ endif ()
 #
 macro(set_component_found _component )
   if (${_component}_LIBRARIES AND ${_component}_INCLUDE_DIRS)
-    # message(STATUS "  - ${_component} found.")
+    message(STATUS "  - ${_component} found.")
     set(${_component}_FOUND TRUE)
   else ()
-    # message(STATUS "  - ${_component} not found.")
+    message(STATUS "  - ${_component} not found.")
   endif ()
 endmacro()
 
@@ -93,6 +93,7 @@ macro(find_component _component _pkgconfig _library _header)
      # in the FIND_PATH() and FIND_LIBRARY() calls
      find_package(PkgConfig)
      if (PKG_CONFIG_FOUND)
+       message(STATUS "pkg-config found")
        pkg_check_modules(PC_${_component} REQUIRED ${_pkgconfig})
      endif ()
   #endif (NOT WIN32)
@@ -113,8 +114,8 @@ macro(find_component _component _pkgconfig _library _header)
       ${PC_FFMPEG_LIBRARY_DIRS}
   )
 
-  #message(STATUS ${${_component}_LIBRARIES})
-  #message(STATUS ${PC_${_component}_LIBRARIES})
+  # message(STATUS ${${_component}_LIBRARIES})
+  # message(STATUS ${PC_${_component}_LIBRARIES})
 
   set(${_component}_DEFINITIONS  ${PC_${_component}_CFLAGS_OTHER} CACHE STRING "The ${_component} CFLAGS.")
   set(${_component}_VERSION      ${PC_${_component}_VERSION}      CACHE STRING "The ${_component} version number.")
@@ -129,9 +130,8 @@ macro(find_component _component _pkgconfig _library _header)
 
 endmacro()
 
-
 # Check for cached results. If there are skip the costly part.
-if (NOT FFMPEG_LIBRARIES)
+#if (NOT FFMPEG_LIBRARIES)
 
   # Check for all possible component.
   find_component(AVCODEC    libavcodec    avcodec  libavcodec/avcodec.h)
@@ -179,7 +179,7 @@ if (NOT FFMPEG_LIBRARIES)
                    FFMPEG_LIBRARIES
                    FFMPEG_DEFINITIONS)
 
-endif ()
+#endif ()
 
 if (NOT TARGET FFmpeg::FFmpeg)
   add_library(FFmpeg::FFmpeg INTERFACE IMPORTED)

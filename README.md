@@ -1,4 +1,4 @@
-# AvCpp [![Build Status](https://travis-ci.org/h4tr3d/avcpp.svg?branch=master)](https://travis-ci.org/h4tr3d/avcpp) [![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/h4tr3d/avcpp.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/h4tr3d/avcpp/context:cpp)
+# AvCpp [![Build Status](https://travis-ci.org/h4tr3d/avcpp.svg?branch=master)](https://travis-ci.org/h4tr3d/avcpp) [![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/h4tr3d/avcpp.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/h4tr3d/avcpp/context:cpp) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com) 
 
 Wrapper for the FFmpeg that simplify usage it from C++ projects.
 
@@ -24,7 +24,7 @@ Requirements
     - libpostproc >= 52.x.x
   - GCC >= 5.0 (C++11 is required)
 
-### Debian
+### Debian, Ubuntu 19.10 and Linux Mint 20.x or newer
 
 You should install FFmpeg packages from the deb-multimedia.org site:
 ```
@@ -42,35 +42,31 @@ Note 1: I did not test building on Debian.
 Note 2: Debian Wheezy repo contains only FFmpeg 1.0.8. I tested building only with 2.x. So it is strongly recoment use Wheezy back-ports repo.
 
 
-### Ubuntu and Linux Mint
+### Ubuntu 18.04 and Linux Mint 19.x
 
-You should add [ffmpeg-3](https://launchpad.net/~jonathonf/+archive/ubuntu/ffmpeg-3) PPA:
+If you are on Ubuntu bionic or Linux Mint 19.x you should add [ffmpeg-4](https://launchpad.net/~jonathonf/+archive/ubuntu/ffmpeg-4) PPA:
+
 ```
-sudo add-apt-repository ppa:jonathonf/ffmpeg-3 -y
-sudo add-apt-repository ppa:jonathonf/tesseract -y
+sudo add-apt-repository ppa:jonathonf/ffmpeg-4 -y
 sudo apt update && sudo apt upgrade
-sudo apt install libavcodec-dev \
-                 libavdevice-dev \
-                 libavfilter-dev \
-                 libavformat-dev \
-                 libavresample-dev \
-                 libavutil-dev \
-                 libpostproc-dev \
-                 libswresample-dev \
-                 libswscale-dev
 ```
+
+After that  just install the same packages as above.
 
 Build
 -----
 
 ```
-git clone https://github.com/h4tr3d/avcpp.git avcpp-git
+git clone --recurse-submodules https://github.com/h4tr3d/avcpp.git avcpp-git
 cd avcpp-git
 mkdir build
 cd build
 cmake ..
 make -j8
 ```
+
+If your Git version so old (refer to the [SO for clarification](https://stackoverflow.com/questions/3796927/how-to-git-clone-including-submodules)) you can just
+replace `--recurse-submodules` with pair of `git submodule init && git submodule update`.
 
 If FFmpeg located in non-standard place:
 ```
@@ -93,23 +89,3 @@ sudo make DESTDIR=<some_prefix> install
 
 Refer to CMake documentation for more details that can cover some special cases.
 
-Near future plans
------------------
-
-  - ~~Building for Android (ready to commint but small code clean up is required)~~
-  - CI with complex build matrix:
-    - FFmpeg 3.x and FFmpeg 2.8
-    - GCC 5 and 7, MSVS 2015 and 2017, clang
-    - Linux, OSX, Windows
-    - Tests
-
-Future plans (long and not)
----------------------------
-
-  - Code cleanup
-  - Remove all deprecates in Filters module (FFmpeg 2.x)
-  - API redisign, make it more intuitively
-  - Filters module complete rework
-  - Add good samples
-  - Make hight-level entities like av::Encoder, av::Decoder, av::Muxer, av::Demuxer and declare some API to combine them.
-  - More advanced Android building

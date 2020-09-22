@@ -19,9 +19,7 @@ extern "C" {
 namespace av {
 
 /**
- * @brief The Dictionary class
- *
- * Implements interface to access to the AVDictionary entity
+ * Implements interface to access to the AVDictionary entity.
  *
  * It also add useful extensions, like:
  * - Iterator interface: you can walk via dictionary entries via foreach cycles
@@ -29,13 +27,11 @@ namespace av {
  *
  * This class also provide way to controll owning: you can create entity that does not owning data but
  * provide access to them. You can drop owning by release() call.
- *
  */
 class Dictionary : public FFWrapperPtr<AVDictionary>
 {
 public:
     /**
-     * @brief The Flags enum
      * AVDictionary flags mapping
      */
     enum Flags
@@ -58,10 +54,11 @@ public:
     };
 
     /**
-     * @brief The RawStringDeleter struct
-     * Deleter for raw string. Helper for string composer
+     * Deleter for raw string.
+     *
+     * Helper for string composer.
      */
-    struct RawStringDeleter
+    struct AvStringDeleter
     {
         void operator()(char *ptr)
         {
@@ -69,15 +66,69 @@ public:
         }
     };
 
-    /// RAW string implementation
-    using RawStringPtr = std::unique_ptr<char, RawStringDeleter>;
+    // Back compatible
+    /// @cond SKIP
+    using RawStringDeleter = AvStringDeleter;
+    /// @endcond
+
+    /**
+     * RAII holder for strings allocated by FFmpeg internals.
+     */
+    struct AvStringPtr : public std::unique_ptr<char, AvStringDeleter>
+    {
+        using base_class = std::unique_ptr<char, AvStringDeleter>;
+        using base_class::unique_ptr;
+
+        /**
+         * Access to the holded string with `std::string` interface
+         * @return holded raw string pointer, or `nullptr` if string is not allocated
+         */
+        char* c_str() const noexcept
+        {
+            return get();
+        }
+
+        /**
+         * RAW string length in bytes
+         *
+         * @note to avoid extra size and keeps `sizeof(AvStringPtr) == sizeof(char*)` we do not
+         *       cache and holds string size. As a result string length calculates every call and
+         *       complexity is `O(n)`, where `n` - count of bytes in string exclude end zero.
+         *
+         * 8-bit based multibyte string like UTF-8 must be processes with appropriate libraries
+         * externally.
+         *
+         * @return calculated length of string in bytes
+         */
+        size_t length() const noexcept
+        {
+            return strlen(c_str());
+        }
+
+        /**
+         * Array-like char access.
+         *
+         * This call avoid any checks. When `index` is greater then `length()` behavior undefined.
+         *
+         * @param index   char index to access
+         * @return  char reference to read/modify.
+         */
+        char& operator[](size_t index) const noexcept
+        {
+            return c_str()[index];
+        }
+    };
+    // Our contract
+    static_assert (sizeof(AvStringPtr) == sizeof(char*), "Size must be same. Check and try again");
+    /// @cond SKIP
+    using RawStringPtr = AvStringPtr;
+    /// @endcond
 
     // Fwd
     template<bool constIterator>
     class DictionaryIterator;
 
     /**
-     * @brief The Entry class
      * Dictionary key and value holder and accessor
      */
     class Entry
@@ -99,6 +150,7 @@ public:
          */
         const char* value() const noexcept;
         /**
+         * @name Entry function-like value set inteface
          * @brief set - change value of the current item
          * @param value new value
          * @param flags access flags, FlagDontStrdupVal only accepted, other flags ignored
@@ -109,6 +161,7 @@ public:
         /// @}
 
         /**
+         * @name Entry operator[]-like value set inteface
          * @brief Helper operators. Syntax shugar.
          * @param value  new item value. Always strduped. Use set() to be more flexibility.
          * @return referenct to this
@@ -274,7 +327,7 @@ public:
      * New dictionary owning resources.
      *
      * @param list   init list
-     * @param flags  see Flags
+     * @param flags  see @ref Flags
      */
     Dictionary(std::initializer_list<std::pair<const char*, const char*>> list, int flags = 0);
 
@@ -293,21 +346,21 @@ public:
      * New dictionary owning resources. Old dictionary destroes (resource freed if owning)
      *
      * @param list   init list
-     * @param flags  see Flags
+     * @param flags  see @ref Flags
      */
     Dictionary& operator=(std::initializer_list<std::pair<const char*, const char*>> list);
 
     /**
-     * @brief Iterator interface
+     * @name Iterator interface
      */
-    /// @{
+    ///@{
     Iterator      begin();
     Iterator      end();
     ConstIterator begin() const;
     ConstIterator end() const;
     ConstIterator cbegin() const;
     ConstIterator cend() const;
-    /// @}
+    ///@}
 
     /**
      * @brief isOwning - checks resources owning status
@@ -325,6 +378,7 @@ public:
     void assign(AVDictionary *dict, bool takeOwning = true) noexcept;
 
     /**
+     * @name Index based access operator
      * @brief operator [] - access to the entry via index
      * O(1) complexity.
      * @param index
@@ -336,6 +390,7 @@ public:
     /// @}
 
     /**
+     * @name Key based access operator
      * @brief operator [] - access to  the entry via key
      * O(n) complexity.
      * @param key
@@ -347,6 +402,7 @@ public:
     /// @}
 
     /**
+     * @name Entries counting
      * @brief count/size - returns count of dictionary entries.
      * O(1) complexity.
      * @return
@@ -354,13 +410,14 @@ public:
     /// @{
     size_t      count() const noexcept;
     size_t      size() const noexcept;
-    /// @
+    /// @}
 
     /**
+     * @name Key based getter interface
      * @brief get - gets value by key
      * O(n) complexity.
-     * @param key
-     * @param flags - see Flags
+     * @param key     key for entry access
+     * @param flags   see @ref Flags
      * @return nullptr if key does not present
      */
     /// @{
@@ -377,17 +434,17 @@ public:
      * @param[in]     value  key value (can be std::string, char* or integer)
      * @param[in,out] ec     this represents the error status on exit, if this is pre-initialized to
      *                       av#throws the function will throw on error instead
-     * @param[in]     flags  see Flags
+     * @param[in]     flags  see @ref Flags
      *
      */
     template<typename Key, typename Value = Key>
-    typename std::enable_if
-    <
-      (std::is_same<Key, std::string>::value || std::is_same<typename std::remove_cv<typename std::decay<Key>::type>::type, char*>::value) &&
-      (std::is_same<Value, std::string>::value || std::is_same<typename std::remove_cv<typename std::decay<Value>::type>::type, char*>::value || std::is_integral<Value>::value)
-      ,void
-    >::type
-    set(const Key& key, const Value& value, OptionalErrorCode ec = throws(), int flags = 0)
+    auto set(const Key& key, const Value& value, OptionalErrorCode ec = throws(), int flags = 0) ->
+         typename std::enable_if
+         <
+             (std::is_same<Key, std::string>::value || std::is_same<typename std::remove_cv<typename std::decay<Key>::type>::type, char*>::value) &&
+             (std::is_same<Value, std::string>::value || std::is_same<typename std::remove_cv<typename std::decay<Value>::type>::type, char*>::value || std::is_integral<Value>::value)
+             ,void
+         >::type
     {
         clear_if(ec);
         int sts;
@@ -415,11 +472,11 @@ public:
      * @return 0 on success, <0 on fail
      */
     template<typename Str, typename Sep1, typename Sep2>
-    void parseString(const Str& str, const Sep1& keyvalSep, const Sep2& pairsSep, int flags = 0, OptionalErrorCode ec = throws())
+    void parseString(const Str& str, const Sep1& keyValSep, const Sep2& pairsSep, int flags = 0, OptionalErrorCode ec = throws())
     {
         parseString_priv(ec,
                          _to_const_char_ptr(str),
-                         _to_const_char_ptr(keyvalSep),
+                         _to_const_char_ptr(keyValSep),
                          _to_const_char_ptr(pairsSep),
                          flags);
     }
@@ -458,7 +515,7 @@ public:
      *
      * @return valid string, null on error (check ec)
      */
-    RawStringPtr toRawStringPtr(const char keyValSep, const char pairsSep, OptionalErrorCode ec = throws()) const;
+    AvStringPtr toRawStringPtr(const char keyValSep, const char pairsSep, OptionalErrorCode ec = throws()) const;
 
     /**
      * @brief copyFrom - copy data from other dictionary.
@@ -467,7 +524,7 @@ public:
      * overrided according to flags.
      *
      * @param other   dict to copy from
-     * @param flags   see Flags
+     * @param flags   see @ref Flags
      */
     void copyFrom(const Dictionary& other, int flags = 0) noexcept;
 
@@ -515,7 +572,7 @@ private:
 
 
 /**
- * @brief The DictionaryArray class
+ * Array of Dictinaries wrapper.
  *
  * Some functions accepts array of dictionaries. This class is a simple proxy to compose such
  * arrays.

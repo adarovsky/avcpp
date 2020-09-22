@@ -166,6 +166,8 @@ bool Packet::setData(const uint8_t *newData, size_t size, OptionalErrorCode ec)
         return false;
     }
 
+    data.release();
+
     m_completeFlag = true;
 
     return true;
@@ -226,7 +228,7 @@ int Packet::streamIndex() const
     return  m_raw.stream_index;
 }
 
-int Packet::flags()
+int Packet::flags() const
 {
     return m_raw.flags;
 }

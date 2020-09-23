@@ -67,11 +67,11 @@ public:
 };
 
 
-class OutputFormat : public Format<const AVOutputFormat>
+class OutputFormat : public Format<AVOutputFormat>
 {
 public:
-    using Format<const AVOutputFormat>::Format;
-    using Format<const AVOutputFormat>::setFormat;
+    using Format<AVOutputFormat>::Format;
+    using Format<AVOutputFormat>::setFormat;
 
     OutputFormat() = default;
 

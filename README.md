@@ -150,3 +150,5 @@ Running the tests:
 
 To run the test just use `meson test`.
 If you disabled the test this will do nothing.
+
+Test
